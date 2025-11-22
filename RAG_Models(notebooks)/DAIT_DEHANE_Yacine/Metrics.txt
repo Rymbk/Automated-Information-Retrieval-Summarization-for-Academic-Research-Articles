@@ -1,0 +1,24 @@
+To compare "baseline model", "Classical RAG", "Agentic RAG", and "GraphRAG" in the context of summarizing scientific papers, the following three metrics would be useful:
+
+1. ROUGE (Recall-Oriented Understudy for Gisting Evaluation)
+How it works: ROUGE measures the overlap between the n-grams (e.g., unigrams, bigrams, trigrams) of the generated summary and the reference summary. It has multiple variants like ROUGE-N (precision, recall, and F1 score for unigrams, bigrams, etc.), ROUGE-L (longest common subsequence), and ROUGE-SU (skip-bigrams).
+
+Why it's useful: ROUGE is widely used for automatic evaluation of summarization tasks. It evaluates the content overlap, which is important for summarizing scientific papers to ensure key points are retained. It can capture both the accuracy and the informativeness of the generated summaries.
+
+Reference: Lin, C.-Y. (2004). "ROUGE: A package for automatic evaluation of summaries." In Proceedings of the Workshop on Text Summarization Branches Out.
+
+2. BLEU (Bilingual Evaluation Understudy)
+How it works: BLEU evaluates the precision of n-grams (usually up to 4-grams) between the generated summary and the reference summary. It computes a geometric mean of the precision scores, adjusted by a brevity penalty to prevent short summaries from scoring artificially high.
+
+Why it's useful: BLEU is often used in machine translation and text generation tasks. It emphasizes the correctness of n-gram matching, which is important for ensuring that the generated summary maintains linguistic quality while retaining factual accuracy.
+
+Reference: Papineni, K., Roukos, S., Ward, T., & Zhu, W.-J. (2002). "BLEU: a method for automatic evaluation of machine translation." In Proceedings of the 40th Annual Meeting on Association for Computational Linguistics.
+
+3. Extractive vs. Abstractive Evaluation (Content Fidelity and Novelty)
+How it works: This metric evaluates how well the generated summary preserves the meaning of the original text (content fidelity) and introduces new insights (novelty) while avoiding redundancy. It can be assessed qualitatively by expert annotators or through a hybrid metric that combines content and novelty measures.
+
+Why it's useful: For summarizing scientific papers, content fidelity ensures that the essential information is retained, while novelty ensures that the summary presents new interpretations or perspectives, which is crucial for an abstractive model like Agentic or GraphRAG.
+
+Reference: Scialom, T., & Gritta, M. (2021). "Evaluating extractive and abstractive summaries for scientific papers." In Proceedings of the 43rd European Conference on Information Retrieval.
+
+Each of these metrics serves to evaluate different aspects of summarization: content overlap (ROUGE), linguistic precision (BLEU), and content fidelity and novelty. Using a combination of these metrics will provide a comprehensive understanding of the performance of each model in summarizing scientific papers.

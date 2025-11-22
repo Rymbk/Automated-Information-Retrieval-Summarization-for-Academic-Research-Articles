@@ -1,0 +1,1777 @@
+Fine-tuning Large Language Models for DGA and DNS Exfiltration Detection
+Md Abu Sayed*, Asif Rahman*, Christopher Kiekintveld*, Sebastian Garc'ia+
+*University of Texas at El Paso, El Paso, Texas 79968, USA
++CTU - Czech Technical University, Prague, Czech Republic
+msayed@miners.utep.edu, arahman3@miners.utep.edu, cdkiekintveld@utep.edu, sebastian.garcia@agents.fel.cvut.cz
+Abstract--Domain Generation Algorithms (DGAs) are mali-
+cious techniques used by malware to dynamically generate
+seemingly random domain names for communication with
+Command & Control (C&C) servers. Due to the fast and
+simple generation of DGA domains, detection methods must
+be highly efficient and precise to be effective. Large Language
+Models (LLMs) have demonstrated their proficiency in real-
+time detection tasks, making them ideal candidates for de-
+tecting DGAs. Our work validates the effectiveness of fine-
+tuned LLMs for detecting DGAs and DNS exfiltration attacks.
+We developed LLM models and conducted comprehensive
+evaluation using a diverse dataset comprising 59 distinct real-
+world DGA malware families and normal domain data. Our
+LLM model significantly outperformed traditional natural lan-
+guage processing techniques, especially in detecting unknown
+DGAs. We also evaluated its performance on DNS exfiltration
+datasets, demonstrating its effectiveness in enhancing cyber-
+security measures. To the best of our knowledge, this is the
+first work that empirically applies LLMs for DGA and DNS
+exfiltration detection.
+Index Terms--Domain Generation Algorithm; DNS Exfiltra-
+tion; Large Language Models; Natural Language Processing.
+1. Introduction
+Malicious software or malware is a growing concern in
+cybersecurity [1], [2], with C&C servers playing a central
+role in enabling attackers to control compromised systems,
+execute commands, and exfiltrate stolen data [3]. One key
+technique botnets use to evade detection is DGAs, which
+create seemingly random domain names for establishing
+communication between bots and the C&C server. These
+algorithms may be time-dependent or time-independent,
+generating multiple domains to obfuscate the server's loca-
+tion. This technique, known as Domain Fluxing, complicates
+efforts to locate the C&C server [4].
+To combat botnets, one of the most effective coun-
+termeasures is identifying the C&C domain through DNS
+request analysis. A technique called "sink-holing" reroutes
+bot requests to disrupt communication with the C&C server.
+There are two primary approaches for detecting C&C
+domains: signature-based (misuse) detection and anomaly
+detection. Signature-based detection relies on identifying
+known malicious domains, while anomaly detection focuses
+on recognizing domains that deviate from typical behavior.
+Both approaches can benefit from machine learning (ML),
+as classifiers can be trained on datasets containing benign
+and malicious domains to detect anomalies and misuse
+effectively [5].
+The data type and classification algorithms used greatly
+impact the effectiveness of DGA detection systems. Two
+major approaches are featureful and featureless methods.
+Featureful methods use predefined characteristics like the
+number of characters or n-gram distributions [6], while fea-
+tureless methods treat domains as raw strings and leverage
+neural networks for classification [7]. Recent literature tends
+to favor the featureless approach due to its simplicity and
+efficiency in detection, although it requires a large dataset
+for optimal performance [8].
+LLMs are particularly well-suited for featureless DGA
+detection due to their ability to automatically extract rele-
+vant patterns and features from raw domain names, without
+requiring manual feature engineering. This is especially
+beneficial when dealing with large datasets, as LLMs can
+efficiently process and learn from extensive data thanks to
+tokenization and parallel processing techniques. By captur-
+ing the intricate patterns within domain name sequences,
+LLMs can effectively address the challenges associated with
+feature extraction, reducing the need for human intervention
+and improving detection accuracy in security tasks [9].
+In this paper, we explore the application of LLMs for
+detecting DGA and DNS exfiltration attacks. Leveraging
+the generalizability of LLMs, we performed fine-tuning
+on a smaller dataset using Parameter-Efficient Fine-Tuning
+(PEFT) techniques. These methods allow us to adapt the
+LLM to specialized tasks while managing computational
+resources efficiently. We perform an extensive evaluation
+using a dataset containing 59 distinct real-world DGA mal-
+ware families and normal domain data. The LLM signif-
+icantly outperformed traditional natural language process-
+ing methods, particularly in identifying unknown DGAs.
+Additionally, its performance on DNS exfiltration datasets
+highlighted its potential to strengthen cybersecurity mea-
+sures. To our knowledge, this is the first study to empirically
+apply LLMs for both DGA and DNS exfiltration detection,
+emphasizing the necessity of fine-tuning for these specific
+tasks.
+arXiv:2410.21723v2  [cs.CR]  7 Nov 2024
+We summarize our main contribution below:
+Validated the need for a fine-tuned LLM model and
+developed one for detecting DGA and DNS exfiltra-
+tion attacks, followed by an in-depth evaluation of
+an extended dataset comprising domain names from
+59 distinct real-world malware DGAs with varying
+generation schemes, as well as normal domains.
+Evaluation of our fine-tuned LLM model shows that
+it not only surpasses established natural language
+processing techniques, such as N-Gram methods, on
+another dataset but also outperforms state-of-the-art
+models in detecting unknown DGAs.
+Summary of key observations and final insights is
+provided for the DNS exfiltration dataset.
+2. Related work
+The research on DGA detection has evolved from sim-
+ple CNN models to more complex approaches incorporat-
+ing multimodal information, lexical features, and advanced
+deep-learning techniques. The field has also progressed from
+binary classification to multi-class classification, enabling
+more granular detection of DGA types.
+Early approaches by Catania et al. [10] conducted a
+thorough assessment and comparison of a Convolutional
+Neural Network (CNN) for detecting Domain Generation
+Algorithm (DGA) domains. The CNN, designed with min-
+imal architectural complexity, was tested on a dataset com-
+prising 51 distinct DGA malware families and normal do-
+main traffic. Despite its simplicity, the model successfully
+identified over 97% of DGA domains while maintaining a
+false positive rate of approximately 0.7%.
+Pei et al. [11] introduce a novel approach for detecting
+DGA botnets by combining textual semantics and visual
+concepts, making it the first study to utilize multimodal
+information for this purpose. They propose a deep learn-
+ing framework, TS-ASRCaps, which automatically learns
+multimodal representations from the data, eliminating the
+need for manual feature engineering. This innovative method
+paves the way for enhanced botnet detection using diverse
+data types.
+Cucchiarelli et al. [8] developed a ML system that de-
+tects malicious domain names using lexical features, specif-
+ically 2-grams and 3-grams extracted from domain names.
+The system utilizes two primary metrics: the Jaccard index
+to evaluate the similarity between domain names and the
+Kullback-Leibler divergence to compare probability distri-
+butions between benign and malicious domains grouped by
+different DGAs. This method is applied to both binary and
+multiclass classification, making it the first study to integrate
+these metrics for domain name classification using both 2-
+gram and 3-gram features.
+Namgung et al. [12] enhance DGA detection by ex-
+tending deep learning-based methods from binary to mul-
+ticlass classification, enabling the identification of specific
+DGA types. They propose a BiLSTM model and optimize
+it further with a CNN+BiLSTM ensemble, demonstrating
+superior performance on recent datasets. Chen et al. [13]
+focus on dictionary-based AGDs, using word segmentation
+and standard deviation features, and combining 3-gram and
+1-gram sequence features for improved detection. They in-
+tegrate these features into an end-to-end approach, achiev-
+ing better accuracy in detecting both character-based and
+dictionary-based AGDs.
+Enterprise networks are prime targets for cyber-attackers
+seeking to exfiltrate sensitive data via DNS channels. Jawad
+et al. [14] develop and validate a real-time detection mecha-
+nism using a machine learning algorithm trained on benign
+DNS queries. Their approach tested on live 10 Gbps traffic
+streams from two organizations by injecting over a million
+malicious DNS queries, and they have made the tools and
+dataset publicly available.
+3. Methodology
+Large Language Models (LLMs) based on transformer
+architecture excel at content generation, but building one
+specifically for cybersecurity is resource-intensive. A more
+efficient approach is fine-tuning pre-trained LLMs with
+cybersecurity-specific datasets, leveraging their existing
+knowledge. This minimizes the need for extensive pre-
+training while enhancing capabilities like threat detec-
+tion. To reduce computational demands, we use Parameter-
+Efficient Fine-Tuning (PEFT) techniques such as Low-Rank
+Adaptation (LoRA) [15] and Quantized LoRA (QLoRA)
+[16], which adjust only a small subset of model parameters
+while preserving most of the pre-trained ones.
+LoRA [15] introduces a small, trainable submodule
+into the transformer architecture by freezing the pre-trained
+model weights and adding a low-rank decomposition matrix,
+significantly reducing the number of parameters needed
+for downstream tasks. Once training is complete, the low-
+rank matrix parameters are merged with the original model.
+QLoRA [16] further optimizes this by using a 4-bit quan-
+tized version of the model, enabling efficient fine-tuning
+with minimal memory requirements while maintaining per-
+formance close to full fine-tuning. We use 4 pre-trained
+LLM model including BERT [17], Roberta [18], LLAMA3
+[19], and Zephyr [20].
+In general, LLMs are trained on extensive amounts of
+unlabeled data using a unique methodology. This process
+involves taking tokens as input, predicting the next token
+in the sequence, and comparing it to the ground truth [9].
+This drives the next-token prediction loss. Specifically, for
+any given input sequence {x1, x2, . . . , xN} of length N,
+the model generates a probability distribution for the next
+token P(xN+1|x1, x2, . . . , xN, Th) = pN+1 [0, 1]v, where
+Th encompasses all model parameters and v is the vocabulary
+size. By comparing this with the actual distribution--a
+one-hot encoded ground-truth token yN+1 {0, 1}v--the
+cumulative cross-entropy loss can be minimized as:
+Lntp =
+yn+1 log P(xn+1|x1, x2, . . . , xn, Th)
+However, when adapting an LLM for classification tasks,
+the objective needs to shift from next-token prediction to the
+classification goal. For an input sequence {x1, x2, . . . , xN},
+the standard pretraining objective would compute the loss
+across all predicted tokens, which may not be optimal for
+classification tasks like vulnerability detection, where the
+task is to classify the entire sequence rather than predicting
+the next token. To better align with classification tasks, we
+propose a loss function that focuses solely on the predicted
+probability of the input sequence {x1, x2, . . . , xN}, which
+is matched against the true label y using cross-entropy. The
+classification loss is defined as:
+Lclass = -log P(y|x1, x2, . . . , xN, Th)
+In this context, y denotes the correct class label, while
+P(y|x1, x2, . . . , xN, Th) represents the probability that the
+model assigns to the correct class. This approach ensures
+that weight updates during training are entirely driven by the
+classification task, with no interference from the generative
+pretraining objective.
+4. Experimental Implementation
+In our experiments, we explored both binary and multi-
+class classification tasks. In the binary setting, we focused on
+differentiating between benign domain names and those gen-
+erated by DGAs, regardless of the specific algorithm used
+for generation. We also consider different domain families
+for binary classification. In the multi-class setting, we aimed
+to identify the exact DGA family responsible for generating
+the domain names. Identifying specific DGAs is crucial for
+gaining deeper insights into vulnerabilities and selecting the
+right countermeasures. Additionally, considering real-world
+scenarios where new DGAs may emerge, it's important for
+a classifier to detect domains generated by unknown DGAs
+as they surface. Our experiments address this challenge.
+Finally, we evaluate our model performance on another
+dataset and compare it with another state-of-the-art model
+[8]. We also share our findings on detecting DNS exfiltration
+attacks and provide a detailed discussion on the dataset and
+the application of LLMs in addressing this type of attack.
+4.1. Datasets
+4.1.1. DGA Datasets. Although there are various sources
+for benign and DGA-based domains, and several datasets
+used in research on detecting malicious domain names are
+available (such as AmritaDGA (Vinayakumar et al., 2019)
+and UMUDGA (Zago et al., 2020)), a standard benchmark
+dataset has not yet been established [21]. In this paper,
+we utilize a combined dataset consisting of three different
+sources: one dataset for benign domains, which includes the
+Alexa Top 1 Million Sites collection of reputable domains 1;
+and two datasets for DGA domains, sourced from Bambenek
+Consulting's malicious algorithmically-generated domains 2
+and the 360 Lab DGA Domains3. Finally, the dataset is
+created by merging and shuffling these three datasets 4. In
+total, our DGA dataset comprises 1458863 domains that are
+DGA-based and 1000000 domains that are Alexa domains.
+The dataset comprises a total of 59 DGA domains and one
+benign domain. An overview of the used dataset is provided
+in Table 1.
+We also use 25-DGA dataset 5 to compare our developed
+model performance with Cucchiarelli et al. [8]. The 25-DGA
+dataset comprises 25 distinct DGA families sourced from
+the Netlab Opendata Project repository 6 and benign domain
+names from Alexa. The dataset includes a total of 675,000
+domain names, evenly split between malicious and benign
+categories. Overall, this dataset has more than 50% overlap
+with the DGA datasets.
+4.1.2. DNS
+Exfiltration
+Dataset.
+A substantial DNS
+dataset was captured from a live network environment,
+comprising over 50 million DNS queries. To protect privacy,
+IP addresses were anonymized. The data was carefully
+analyzed to extract features based on individual DNS re-
+quests and patterns across multiple requests. This processed
+dataset, reduced to approximately 35 million records, in-
+cludes both normal DNS traffic and malicious exfiltration at-
+tempts. To increase the challenge of detection, a customized
+dataset with altered request patterns was generated [22].
+4.2. Training Process
+The training process involves splitting the dataset, fine-
+tuning the LLM model using the training data, performing
+validation, and concluding with the testing phase.
+4.2.1. Dataset Split. Our complete DGA dataset was di-
+vided into training, validation, and test sets with a split
+ratio of 30%, 20%, and 50%, respectively. This stratified
+approach maintains the class distribution across all sets, en-
+suring a balanced representation. The split provides enough
+data for training, focuses on hyperparameter tuning, and
+reserves a large portion for testing to assess generalization.
+The training set (30%) was used for fine-tuning the LLM,
+the validation set (20%) for monitoring performance and
+preventing overfitting, and the test set (50%) for unbiased
+final evaluation. For other tasks like binary, multi-class, and
+unknown domain classification, we used a smaller dataset
+(10k samples), split as 60% training, 20% validation, and
+20% testing, to test how well the LLM generalizes with a
+small amount of data.
+4.2.2. Fine-Tunning. The fine-tuning process of LLM for
+text classification begins by loading a pre-trained model
+checkpoint configured for a binary classification task with
+two output labels. The tokenizer is modified to accommodate
+mixed domain.csv
+6. data.netlab.360.com/dga
+TABLE 1. OVERVIEW OF THE DGA DATASET.
+# Domains
+Examples
+xshellghost
+zsvubwnqlefqv.com
+ccleaner
+ab693f4c0bc7.com
+madmax
+blackhole
+xlkaykasqozhuppr.ru
+tofsee
+dueduea.biz
+tinynuke
+08f1c1a243222466f50e192ade8e5e54
+.com
+omexo
+023b2230f255816c166f4d665df0c704
+.net
+cryptowall
+adolfforua.com
+vidro
+ahllpje.dyndns.org
+proslikefan
+adzvhm.ru
+gspy
+01247dc1d13789b3.net
+bamital
+014d9e57888d4e2b783c438135d58a30.
+co.cc
+bedep
+tfkgpjablr5q.com
+hesperbot
+nleflqnx.com
+pykspa v2 real
+abprjmj.net
+beebone
+ns1.backdates0.biz
+tempedreve
+afcvuvgro.org
+corebot
+0k87re2wtynenwjy6k.ddns.net
+fobber v1
+aaibkbnkncaxyjiph.net
+fobber v2
+aajywwtpxk.com
+conficker
+abclnfnc.org
+matsnu
+ability-case.com
+geodo
+acigkycvyrdocbic.eu
+fobber
+aaibkbnkncaxyjiph.net
+padcrypt
+aaacofnekfkddcfn.ga
+pykspa v2 fake
+adnkxyfrp.net
+vawtrak
+aberity.top
+dircrypt
+abnqumgstmnwpge.com
+Volatile
+adobeflashplatyerge.co.uk
+chinad
+1,000
+00e8k8h6aoq42bsc.org
+cryptolocker
+1,000
+abrujanifnilt.org
+pushdo
+1,680
+bacoqodaluc.kz
+ramdo
+2,000
+aaaacqmeeoeumwey.org
+qadars
+2,000
+02kawmsa428q.org
+2,000
+aebynzcalfbbqjbpljvqsl.com
+shifu
+2,554
+igmbesd.info
+suppobox
+3,316
+toreking.ne
+symmi
+4,320
+osutakfomaickee.ddns.net
+locky
+5,163
+efvsxusdianhmrwnh.r
+Cryptolocker
+6,000
+kxxtrmowmtth.net
+nymaim
+6,309
+kjcplhuz.net
+kraken
+6,958
+idxjoj.dynserv.com
+dyre
+8,998
+tdc3e6d984803a757ff87b3ff158eb6c63
+virut
+10,433
+bniifl.com
+gameover
+12,000
+pfurgsvggyxkllfreivd.org
+shiotob
+12,521
+4ww5rdlc1b4bmz.net
+pykspa
+14,215
+syasoaiq.net
+ranbyus
+23,678
+nqniepiymsdjke.tw
+simda
+31,044
+rypydal.info
+murofet
+37,080
+wsoxolklejtslant.biz
+qakbot
+40,000
+sortgymeuyeba.org
+necurs
+40,960
+nsmljjaqlfbd.xxx
+pykspa1
+44,647
+uogoxwiugkeq.biz
+ramnit
+57,728
+mdtyicvfelesdeh.com
+Post
+66,000
+pqij0tpai87fswyqpw3u8bsh.net
+tinba
+100,178
+vwwhinolkkme.in
+rovnix
+179,980
+znukgz6o6fodhpv3vr.net
+emotet
+286,816
+iqfindbnlvcfemde.eu
+banjori
+439,423
+wyvzererwyatanb.com
+the input data by adding padding tokens where necessary.
+The dataset is then tokenized, transforming the text data
+into numerical inputs with truncation applied to limit the
+length of the sequences. To improve training efficiency,
+LoRA method is applied to BERT and Roberta, enabling up-
+dates to specific model components using fewer parameters.
+Additionally, we employ the QLoRA (4-bit quantization)
+technique to LLAMA and Zephyr as these models has 8
+and 7 billion parameters respectively. Table 2 represents the
+number of parameters in the pre-trained model we selected
+and the fine-tuned model we developed.
+TABLE 2. NUMBER OF TRAINABLE PARAMETERS IN DIFFERENT
+MODELS
+Model
+Base Model
+Trainable
+Parameters
+Lora Based
+Model
+Trainable
+Parameters
+Qlora Based
+Model
+Trainable
+Parameters
+Fine-tunned
+Model size
+BERT
+67,584,004
+628,994
+(0.93%)
+3.5 MB
+Roberta
+125,313,028
+665,858
+(0.53%)
+5.8MB
+LLAMA3
+7,518,572,544
+13,639,680
+(0.18%)
+61 MB
+Zephyr
+7,124,307,968
+13,639,680
+(0.19%)
+55 MB
+4.2.3. Testing. The testing process begins by evaluating
+the fine-tuned model on the test dataset using the trainer's
+prediction function, which generates predictions for the test
+samples. These predictions are then processed by determin-
+ing the predicted class labels through the maximum proba-
+bility. Various performance metrics are computed, including
+accuracy, precision, recall, and F1 score, which provide
+insight into the model's ability to correctly classify samples.
+We evaluate the performance of the LLM model using test
+datasets of varying sizes, including 100k for large test data,
+10k for binary classification across different DGA domains,
+100k for multiclass classification, and 40k for unknown
+DGA domain classification.
+4.3. Evaluation Metrics
+We use accuracy, precision, recall, and F-measure met-
+rics for evaluating the model's performance.
+Accuracy (Acc.): The proportion of correctly classified
+samples out of the total samples, reflecting the confidence
+in the classification
+Acc. =
+TP + TN
+TP + FP + FN + TN
+Precision (Prec.): The proportion of true positives (TPs)
+to the total of true positives (TPs) and false positives (FPs),
+indicating the confidence in the classification.
+Prec. =
+TP + FP
+Recall (Rec.): The proportion of true positives (TPs) to
+the combined total of true positives (TPs) and false negatives
+(FNs), reflecting the completeness of the classification.
+Rec. =
+TP + FN
+F-Measure (F1): The harmonic mean of precision and
+recall, providing an overall measure of the classification's
+performance.
+F1 = 2 *Prec. *Rec.
+Prec. + Rec.
+4.4. Experiments
+4.4.1. DGA. In our experiments, we investigate two distinct
+scenarios. The first scenario, widely adopted in the literature,
+involves both binary and multiclass classification of domains
+generated by known DGAs. In the binary classification, all
+DGA-generated domains are grouped into a single malicious
+class, and the goal is to distinguish them from benign
+domains using a large balanced test set of 100k samples. We
+further perform binary classification by grouping specific
+DGA-generated domains into balanced test sets of 10k sam-
+ples each, focusing on 20 domains with over 5,000 examples
+each. In the multiclass classification experiment, each DGA
+family is assigned its class (19 classes total), along with an
+additional class for benign domains, resulting in 20 classes,
+each represented by 5k samples for performance testing.
+Additionally, we tackle the identification of malicious
+domain names generated by unknown DGAs, a topic that
+is rarely addressed in the literature [7], [8]. To simulate
+this scenario, we train the classifier in binary mode using
+malicious domains generated by various DGAs, excluding
+one domain class from the training data, and then test it on
+domains generated by the excluded DGA, using 20k benign
+and 20k excluded domains. We conduct 12 separate binary
+classification experiments, each considering a different DGA
+as the unknown class, focusing on 12 DGA domains that
+each have over 20k samples.
+Binary, multiclass, and unknown DGA classifiers are
+fine-tuned using the full domain name, with 6k samples for
+training and 2k for validation. The training, validation, and
+test datasets are balanced, containing an equal distribution
+of benign and malicious domains. The fine-tuned model is
+publicly accessible on Huggingface 7 and our GitHub page
+4.4.2. DNS Exfiltration. Before analyzing the DNS ex-
+filtration data, we take specific steps to ensure that our
+model works with unbiased and balanced datasets. Our
+experiments are conducted on balanced DNS exfiltration
+data using two types of models: BERT and Hybrid BERT.
+The BERT model relies solely on textual data to detect DNS
+exfiltration attacks, while the Hybrid BERT model integrates
+both continuous and textual data for analysis.
+5. Results and Discussion
+In this section, we demonstrate the experimental results
+achieved under the various experimental settings explored
+in this paper. We present the performance of our fine-tuned
+model on our DGA dataset for both binary and multiclass
+classification of known DGAs. We also compare the ef-
+fectiveness of our fine-tuned model against state-of-the-art
+models for classifying unknown DGAs. Finally, we evalu-
+ate the model's performance across the entire dataset and
+flowalerts/LLM
+benchmark it against state-of-the-art models using different
+datasets, including the 25-DGA dataset.
+We first evaluate the performance of the LLM model
+without any prior training on malicious or benign domains,
+a process known as testing the pre-trained model. The main
+motivation is that since LLM models are trained on vast
+corpora, they might perform well on this task; if the pre-
+trained model effectively distinguishes between benign and
+malicious domains, it could be used without further adjust-
+ments like fine-tuning for specific tasks. We use prompts
+such as '['role' : "user", "content" : msg, ]', where msg is
+give me yes or no answer?'. However, the accuracy of the
+pre-trained LLM for binary classification is below 50%,
+indicating the need to work with a fine-tuned LLM model.
+5.1. Known DGA: Binary Classification
+Table
+3 displays the performance of our developed
+model large balanced test datasets. Overall, LLAMA3-FT
+outperforms other LLM models, achieving an accuracy of
+98.6%. Table 4 illustrates our model's performance on bi-
+nary classification across various domain types. LLAMA3-
+FT remains the top-performing model, followed by Zephyr-
+FT, Roberta-FT, and BERT-FT. However, the accuracy here
+is slightly lower than in Table 3. This decrease is because
+we averaged the accuracy across different domain types,
+with 20 DGA domain types having equal data amounts,
+which was not the case previously.
+5.2. Known DGA: Multi-class Classification
+Table 5 summarizes the results of the multi-class clas-
+sification on our DGA datasets, with the best performances
+highlighted in bold. LLAMA3-FT and Zephyr-FT showed
+nearly identical results, followed by Roberta-FT and BERT-
+FT. The overall accuracy was 77%, significantly lower than
+the 95% reported for the 25-DGA and UMDGA datasets
+[8]. This lower accuracy is likely due to the complexity of
+multiclass classification with over 20 classes and the limited
+data used (6k data for fine-tuning multiclass problem).
+5.3. Unknown DGA: Binary Classification
+The classification results for the unknown DGA setting
+are presented in Table 6. Each row of the table begins with
+the DGA used to test the classifiers, representing the un-
+known DGA. Generally, classifying unknown DGAs is more
+challenging than known DGAs. We evaluated 12 unknown
+DGA domains, 9 of which align with the unknown DGA
+experiments in [8]. Our LLAMA3-FT model outperforms
+in certain unknown DGA types, achieving higher accuracy
+than the model developed by Cucchiarell et al. [8], for muro-
+fet, tinba, rovnix, and emotet domain. In every instance,
+our LLAMA3-FT model outperformed the other classifiers,
+achieving notably strong results, such as for banjori (97%),
+pykspa (97.4%), and simda (80.5%). Overall, these findings
+TABLE 3. RESULTS OF THE BINARY CLASSIFICATION TASK USING OUR METHOD ON THE DGA DATASET (TESTED WITH LARGE DATA, 100K). WE
+REPORT THE OVERALL ACCURACY AND, FOR EACH CLASS (BENIGN AND MALICIOUS), PRECISION, RECALL, AND F-1 SCORE. BEST RESULTS ARE
+HIGHLIGHTED IN BOLD.
+BERT-FT
+Roberta-FT
+LLAMA3-FT
+Zephyr-FT
+Class
+Prec.
+Rec.
+Prec.
+Rec.
+Prec.
+Rec.
+Prec.
+Rec.
+Benign
+0.977
+0.988
+0.983
+0.991
+0.991
+0.996
+0.985
+0.993
+Malicious
+0.967
+0.983
+0.977
+0.988
+0.981
+0.99
+0.981
+0.990
+Accuracy
+0.972
+0.98
+0.986
+0.983
+TABLE 4. RESULTS OF THE BINARY CLASSIFICATION TASK USING OUR METHOD ON THE DGA DATASET ACROSS DIFFERENT DGA FAMILIES. WE
+PRESENT THE OVERALL ACCURACY, PRECISION, RECALL, AND F-1 SCORE. BEST OUTCOMES ARE HIGHLIGHTED IN BOLD.
+BERT-FT
+Roberta-FT
+LLAMA3-FT
+Zephyr-FT
+Class
+Prec.
+Rec.
+Prec.
+Rec.
+Prec.
+Rec.
+Prec.
+Rec.
+Cryptolocker
+0.980
+0.996
+0.988
+0.984
+0.991
+0.988
+0.991
+0.999
+0.995
+0.983
+0.998
+0.991
+Nymaim
+0.978
+0.873
+0.922
+0.982
+0.856
+0.915
+0.990
+0.930
+0.961
+0.982
+0.940
+0.960
+Kraken
+0.979
+0.935
+0.957
+0.983
+0.920
+0.950
+0.991
+0.976
+0.983
+0.982
+0.958
+0.970
+Dyre
+0.977
+0.839
+0.903
+0.984
+1.000
+0.992
+0.990
+0.958
+0.974
+0.982
+0.952
+0.967
+Virut
+0.952
+0.394
+0.558
+0.966
+0.450
+0.614
+0.983
+0.518
+0.678
+0.970
+0.560
+0.710
+Gameover
+0.980
+1.000
+0.990
+0.984
+1.000
+0.992
+0.991
+0.999
+0.995
+0.983
+1.000
+0.991
+Shiotob
+0.980
+0.978
+0.979
+0.984
+0.988
+0.986
+0.990
+0.999
+0.995
+0.983
+0.998
+0.990
+Pykspa
+0.978
+0.909
+0.943
+0.983
+0.908
+0.944
+0.990
+0.959
+0.975
+0.983
+0.961
+0.972
+Ranbyus
+0.980
+0.997
+0.989
+0.984
+0.998
+0.990
+0.991
+1.000
+0.995
+0.983
+0.999
+0.991
+Simda
+0.969
+0.616
+0.753
+0.979
+0.764
+0.859
+0.989
+0.822
+0.898
+0.981
+0.882
+0.929
+Murofet
+0.980
+0.999
+0.990
+0.984
+0.999
+0.991
+0.991
+1.000
+0.995
+0.983
+1.000
+0.991
+Qakbot
+0.980
+0.987
+0.984
+0.984
+0.985
+0.985
+0.991
+0.997
+0.994
+0.983
+0.997
+0.990
+Necurs
+0.979
+0.945
+0.962
+0.983
+0.953
+0.968
+0.990
+0.982
+0.986
+0.982
+0.937
+0.959
+Pykspa1
+0.980
+0.924
+0.951
+0.983
+0.927
+0.954
+0.990
+0.963
+0.976
+0.983
+0.967
+0.975
+Ramnit
+0.980
+0.973
+0.977
+0.984
+0.967
+0.975
+0.990
+0.991
+0.991
+0.983
+0.991
+0.987
+Post
+0.980
+0.999
+0.989
+0.984
+0.999
+0.993
+0.991
+0.999
+0.995
+0.983
+0.999
+0.991
+Tinba
+0.980
+0.994
+0.987
+0.984
+0.992
+0.988
+0.990
+0.998
+0.995
+0.983
+0.996
+0.990
+Rovnix
+0.980
+0.999
+0.989
+0.984
+0.999
+0.992
+0.992
+1.000
+0.995
+0.983
+1.000
+0.991
+Emotet
+0.980
+1.000
+0.990
+0.984
+0.999
+0.992
+0.990
+1.000
+0.995
+0.983
+1.000
+0.991
+Banjori
+0.980
+0.980
+0.980
+0.984
+0.993
+0.988
+0.991
+0.984
+0.987
+0.983
+0.985
+0.984
+Accuracy
+0.95
+0.96
+0.973
+0.970
+TABLE 5. RESULTS OF THE MULTI-CLASS CLASSIFICATION TASK ON THE DGA DATASET. BEST RESULTS ARE MARKED IN BOLD.
+BERT-FT
+Roberta-FT
+LLAMA3-FT
+Zephyr-FT
+Class
+Prec.
+Rec.
+Prec.
+Rec.
+Prec.
+Rec.
+Prec.
+Rec.
+Nymaim
+0.530
+0.441
+0.481
+0.476
+0.504
+0.490
+0.452
+0.655
+0.535
+0.446
+0.715
+0.550
+Kraken
+0.944
+0.843
+0.891
+0.945
+0.835
+0.887
+0.932
+0.842
+0.884
+0.955
+0.845
+0.896
+Dyre
+0.998
+1.000
+0.999
+0.999
+1.000
+0.999
+0.999
+1.000
+0.999
+0.999
+1.000
+0.999
+Virut
+0.745
+0.981
+0.847
+0.752
+0.970
+0.848
+0.903
+0.964
+0.933
+0.882
+0.918
+0.940
+Gameover
+0.451
+0.176
+0.253
+0.446
+0.445
+0.185
+0.488
+0.708
+0.579
+0.481
+0.906
+0.628
+Shiotob
+0.953
+0.902
+0.927
+0.966
+0.885
+0.923
+0.987
+0.917
+0.951
+0.997
+0.905
+0.949
+Pykspa
+0.338
+0.278
+0.305
+0.286
+0.113
+0.162
+0.380
+0.196
+0.258
+0.399
+0.196
+0.263
+Ranbyus
+0.718
+0.780
+0.747
+0.847
+0.662
+0.743
+0.852
+0.799
+0.824
+0.894
+0.764
+0.823
+Simda
+0.871
+0.912
+0.891
+0.846
+0.919
+0.881
+0.860
+0.949
+0.902
+0.898
+0.945
+0.921
+Murofet
+0.660
+0.752
+0.703
+0.704
+0.718
+0.711
+0.804
+0.611
+0.694
+0.840
+0.675
+0.749
+Qakbot
+0.585
+0.483
+0.529
+0.623
+0.478
+0.541
+0.588
+0.577
+0.582
+0.565
+0.615
+0.589
+Necurs
+0.915
+0.728
+0.811
+0.963
+0.701
+0.812
+0.911
+0.783
+0.842
+0.929
+0.770
+0.842
+Pykspa1
+0.542
+0.637
+0.586
+0.523
+0.854
+0.649
+0.550
+0.605
+0.576
+0.576
+0.630
+0.601
+Ramnit
+0.589
+0.535
+0.560
+0.594
+0.626
+0.610
+0.549
+0.755
+0.636
+0.572
+0.695
+0.627
+Post
+0.520
+0.842
+0.643
+0.521
+0.914
+0.663
+0.541
+0.278
+0.368
+0.538
+0.038
+0.071
+Tinba
+0.640
+0.791
+0.707
+0.569
+0.810
+0.669
+0.820
+0.922
+0.868
+0.751
+0.924
+0.828
+Rovnix
+0.966
+0.956
+0.961
+0.967
+0.971
+0.969
+0.992
+0.987
+0.989
+0.999
+0.978
+0.988
+Emotet
+0.935
+0.999
+0.966
+0.936
+1.000
+0.967
+0.979
+0.994
+0.986
+0.975
+0.992
+0.983
+Banjori
+0.946
+0.983
+0.964
+0.945
+0.991
+0.967
+0.987
+0.994
+0.971
+0.978
+0.987
+0.982
+Benign
+0.932
+0.806
+0.865
+0.946
+0.783
+0.857
+0.955
+0.907
+0.930
+0.956
+0.901
+0.928
+Accuracy
+0.741
+0.742
+0.77
+0.769
+indicate that our developed model is effective in recognizing
+DGA variants over time.
+We achieved an overall average accuracy of 97.2%
+across 12 unknown DGA domains, which is slightly lower
+than the accuracy of the binary classifier for known DGA
+domains. This difference is due to evaluating performance
+on previously unseen DGA families and comparing it with
+known DGA binary classifiers. Moreover, this comparison
+TABLE 6. UNKNOWN DGA DOMAIN RESULTS. FOR EACH UNKNOWN DGA (FIRST COLUMN), WE REPORT THE RESULTS OBTAINED BY THE FOUR
+CLASSIFIERS.
+BERT-FT
+Roberta-FT
+LLAMA3-FT
+Zephyr-FT
+N-Gram
+Class
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Acc.
+Simda
+0.957
+0.526
+0.679
+0.751
+0.911
+0.210
+0.340
+0.60
+0.981
+0.622
+0.761
+0.805
+0.984
+0.541
+0.70
+0.766
+0.986
+Ranbyus
+0.969
+0.995
+0.982
+0.982
+0.969
+0.998
+0.983
+0.983
+0.984
+0.999
+0.992
+0.992
+0.980
+0.999
+0.989
+0.990
+0.996
+Murofet
+0.970
+0.998
+0.984
+0.984
+0.979
+0.998
+0.989
+0.989
+0.990
+0.999
+0.994
+0.995
+0.981
+0.990
+0.990
+0.990
+Qakbot
+0.965
+0.991
+0.978
+0.978
+0.971
+0.986
+0.978
+0.978
+0.988
+0.998
+0.993
+0.993
+0.990
+0.995
+0.992
+0.992
+Necurs
+0.965
+0.959
+0.961
+0.962
+0.965
+0.934
+0.949
+0.950
+0.987
+0.985
+0.986
+0.990
+0.981
+0.940
+0.960
+0.961
+0.990
+Pykspa1
+0.961
+0.882
+0.920
+0.923
+0.975
+0.869
+0.919
+0.923
+0.980
+0.968
+0.974
+0.974
+0.988
+0.940
+0.964
+0.965
+0.983
+Ramnit
+0.964
+0.974
+0.969
+0.969
+0.981
+0.946
+0.963
+0.964
+0.984
+0.995
+0.990
+0.990
+0.988
+0.988
+0.988
+0.988
+0.994
+Post
+0.965
+0.982
+0.982
+0.972
+0.986
+0.986
+0.991
+0.978
+0.985
+0.985
+0.973
+0.994
+0.986
+0.986
+Tinba
+0.964
+0.994
+0.979
+0.979
+0.988
+0.984
+0.986
+0.986
+0.990
+0.999
+0.994
+0.994
+0.960
+0.999
+0.982
+0.981
+0.993
+Rovnix
+0.971
+0.991
+0.985
+0.985
+0.976
+0.999
+0.988
+0.988
+0.991
+0.996
+0.996
+0.983
+0.999
+0.991
+0.991
+0.987
+Emotet
+0.981
+0.992
+0.990
+0.991
+0.975
+0.999
+0.987
+0.987
+0.992
+0.996
+0.996
+0.970
+0.984
+0.985
+0.995
+Banjori
+0.967
+0.730
+0.832
+0.852
+0.968
+0.716
+0.823
+0.846
+0.984
+0.960
+0.970
+0.970
+0.993
+0.740
+0.848
+0.867
+highlights the generalizability of our developed LLM model.
+5.4. Performance on Full Dataset and Compare
+with Other Datasets
+Table 7 presents fine-tuned model performance on the
+full dataset and compares our developed model performance
+with another model over different datasets. Our LLAMA3-
+FT outperforms other model in terms of performance over
+different metrics such as precision, recall, F-1, and accuracy.
+However, the LLAMA3-FT and Zephyr-FT model number
+of sample processing over train, validation, and inference
+is much less compared to BERT-FT and Roberta-FT as
+they have large number of parameters. The performance
+of our LLAMA3-FT model surpasses that of the model
+developed by Cucchiarell et al. [8] on the UMDGA datasets.
+Additionally, our developed fine-tuned model outperforms
+previous work [10], [11], [13]. It is worth noting that this
+comparison is not on the same dataset but they have overlap.
+We compared the performance of our fine-tuned model
+with natural language processing techniques, such as N-
+Gram methods [8], using the 25-DGA dataset over both
+the full domain name and without the top-level domain.
+The dataset was divided into 30% for training, 20% for
+validation, and 50% for testing. Our fine-tuned model's
+accuracy was slightly lower, by about 0.9%, compared to the
+N-Gram model. This difference is mainly due to their use
+of 10-fold cross-validation, allowing their model to utilize
+the entire dataset.
+5.5. LLM Model Performance on DNS Exfiltration
+Attack
+The DNS exfiltration dataset includes both regular re-
+quests and exfiltrations carried out using DNSExfiltrator and
+Iodine tools [22]. However, there are two types of malicious
+DNS requests: the first involves real benign exfiltrations
+performed by AV products, specifically ESET and McAfee.
+We take this into account to ensure a balanced dataset.
+Some requests from the attack tools are repeated, so we
+need to address this to avoid working with duplicated data
+and ensure our datasets remain unbiased. Additionally, since
+the attacks are generated in a simulated environment and
+all share the domain '.dnsresearch.ml' as their TLD and
+first domain, there's a risk that the LLM could identify the
+tool and recognize that domain as associated with malicious
+activity. To prevent our model from specifically learning
+that domain, we remove the TLD '.dnsresearch.ml' from
+the domain names. We tested our BERT and BERT Hybrid
+models on the cleaned dataset, taking into account the
+previously mentioned considerations. Both models achieved
+100% accuracy on the test data, mirroring the same result
+in training after 10 epochs. This is very optimistic perfor-
+mance.
+The primary issue behind the high performance, includ-
+ing 100% accuracy, observed in some models could be
+due to data leakage and an overly simplistic dataset. Data
+leakage occurs when information from outside the training
+set inadvertently influences model building, such as when
+training features are directly correlated with the target label.
+This can lead to artificially inflated performance metrics that
+do not reflect the model's true capability Additionally, if the
+dataset is too simple or contains easily identifiable patterns,
+the model might achieve near-perfect accuracy with minimal
+challenge, indicating that the dataset does not adequately
+represent the complexity of the problem domain. Based on
+these findings, it is evident that this dataset may not be suit-
+able for detecting DNS exfiltration attacks, and researchers
+should consider exploring more complex datasets to better
+capture the nuances of the problem.
+6. Conclusion
+The development of fine-tuned models for DGA and
+DNS exfiltration detection provides valuable insights. The
+fine-tuned model's binary classification results for DGA
+detection significantly outperform previous work, demon-
+strating its effectiveness across various datasets, whether
+small or large, complete or partial. This underscores the
+importance of fine-tuning in improving detection capabili-
+ties, as evidenced by its superior performance in identifying
+known DGAs compared to earlier methods. However, the
+model faces challenges in multiclass classification due to the
+complexity of distinguishing between multiple DGA classes,
+necessitating further optimization in feature engineering,
+architecture, and model parameters. Notably, the model
+excels in detecting unknown DGAs, surpassing state-of-
+the-art techniques and proving its robustness for real-world
+TABLE 7. PERFORMANCE ON FULL DATASET AND COMPARE WITH DATASETS
+a) Our DGA Dataset
+BERT-FT
+Roberta-FT
+LLAMA3-FT
+Zephyr-FT
+N-Gram
+Train
+2556 samples per second
+1484 samples per second
+10 samples per second
+8 samples per second
+Validation
+6367 samples per second
+3865 samples per second
+33 samples per second
+26 samples per second
+Inference
+619 samples per second
+388 samples per second
+63 samples per second
+59 samples per second
+Criteria
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Acc.
+Test
+0.994
+0.994
+0.994
+0.992
+0.992
+0.992
+0.992
+0.991
+0.997
+0.996
+0.996
+0.996
+0.996
+0.997
+0.996
+0.995
+b) 25-DGA Dataset, full domain
+BERT-FT
+Roberta-FT
+LLAMA3-FT
+Zephyr-FT
+N-Gram
+Criteria
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Acc.
+Test
+0.971
+0.974
+0.973
+0.973
+0.959
+0.958
+0.959
+0.959
+0.981
+0.990
+0.986
+0.986
+0.983
+0.985
+0.984
+0.984
+0.995
+b) 25-DGA Dataset, no TLD
+BERT-FT
+Roberta-FT
+LLAMA3-FT
+Zephyr-FT
+N-Gram
+Criteria
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Prec.
+Rec.
+Acc.
+Acc.
+Test
+0.948
+0.937
+0.942
+0.942
+0.939
+0.935
+0.937
+0.937
+0.974
+0.976
+0.975
+0.975
+0.967
+0.973
+0.971
+0.971
+0.992
+cybersecurity scenarios. Despite its success, the analysis of
+DNS exfiltration datasets reveals that their simplicity leads
+to near-perfect accuracy with minimal effort, highlighting
+the need for more complex datasets. In the future, combining
+other network traffic may improve the precision of anomaly
+detection and open the door to more advanced cybersecurity
+solutions.
+References
+M. A. Sayed, A. H. Anwar, C. Kiekintveld, B. Bosansky, and
+C. Kamhoua, "Cyber deception against zero-day attacks: a game
+theoretic approach," in International Conference on Decision and
+Game Theory for Security.
+Springer, 2022, pp. 44-63.
+M. A. Sayed, A. H. Anwar, C. Kiekintveld, and C. Kamhoua, "Hon-
+eypot allocation for cyber deception in dynamic tactical networks: A
+game theoretic approach," in International Conference on Decision
+and Game Theory for Security.
+Springer, 2023, pp. 195-214.
+ENISA,
+"Enisa
+threat
+landscape
+report
+2023."
+@@download/fullReport.
+D.-T. Truong and G. Cheng, "Detecting domain-flux botnet based on
+dns traffic features in managed network," Security and Communica-
+tion Networks, vol. 9, no. 14, pp. 2338-2347, 2016.
+S. Al-Mashhadi, M. Anbar, S. Karuppayah, and A. K. Al-Ani, "A
+review of botnet detection approaches based on dns traffic analysis,"
+Intelligent and Interactive Computing: Proceedings of IIC 2018, pp.
+305-321, 2019.
+H. Suryotrisongko, Y. Musashi, A. Tsuneda, and K. Sugitani, "Ro-
+bust botnet dga detection: Blending xai and osint for cyber threat
+intelligence sharing," IEEE Access, vol. 10, pp. 34 613-34 624, 2022.
+M. Zago, M. Gil P'erez, and G. Mart'inez P'erez, "Scalable detection of
+botnets based on dga: efficient feature discovery process in machine
+learning techniques," Soft Computing, vol. 24, no. 8, pp. 5517-5537,
+2020.
+A. Cucchiarelli, C. Morbidoni, L. Spalazzi, and M. Baldi, "Algo-
+rithmically generated malicious domain names detection based on
+n-grams features," Expert Systems with Applications, vol. 170, p.
+114551, 2021.
+A. Shestov, A. Cheshkov, R. Levichev, R. Mussabayev, P. Zadorozhny,
+E. Maslov, C. Vadim, and E. Bulychev, "Finetuning large language
+models for vulnerability detection," arXiv preprint arXiv:2401.17010.
+[10] C. Catania, S. Garc'ia, and P. Torres, "Deep convolutional neural
+networks for dga detection," in Computer Science-CACIC 2018: 24th
+Argentine Congress, Tandil, Argentina, October 8-12, 2018, Revised
+Selected Papers 24.
+Springer, 2019, pp. 327-340.
+[11] X. Pei, S. Tian, L. Yu, H. Wang, and Y. Peng, "A two-stream network
+based on capsule networks and sliced recurrent neural networks for
+dga botnet detection," Journal of Network and Systems Management,
+vol. 28, pp. 1694-1721, 2020.
+[12] J. Namgung, S. Son, and Y.-S. Moon, "Efficient deep learning models
+for dga domain detection," Security and Communication Networks,
+vol. 2021, no. 1, p. 8887881, 2021.
+[13] S. Chen, B. Lang, Y. Chen, and C. Xie, "Detection of algorithmically
+generated malicious domain names with feature fusion of meaningful
+word segmentation and n-gram sequences," Applied Sciences, vol. 13,
+no. 7, p. 4406, 2023.
+[14] J. Ahmed, H. H. Gharakheili, Q. Raza, C. Russell, and V. Sivaraman,
+"Real-time detection of dns exfiltration and tunneling from enterprise
+networks," in 2019 IFIP/IEEE Symposium on Integrated Network and
+Service Management (IM).
+IEEE, 2019, pp. 649-653.
+[15] E. J. Hu, Y. Shen, P. Wallis, Z. Allen-Zhu, Y. Li, S. Wang, L. Wang,
+and W. Chen, "Lora: Low-rank adaptation of large language models,"
+arXiv preprint arXiv:2106.09685, 2021.
+[16] T. Dettmers, A. Pagnoni, A. Holtzman, and L. Zettlemoyer, "Qlora:
+Efficient finetuning of quantized llms," Advances in Neural Informa-
+tion Processing Systems, vol. 36, 2024.
+[17] J. Devlin, "Bert: Pre-training of deep bidirectional transformers for
+language understanding," arXiv preprint arXiv:1810.04805, 2018.
+[18] Z. Liu, W. Lin, Y. Shi, and J. Zhao, "A robustly optimized bert pre-
+training approach with post-training," in China National Conference
+on Chinese Computational Linguistics. Springer, 2021, pp. 471-484.
+[19] H. Touvron, T. Lavril, G. Izacard, X. Martinet, M.-A. Lachaux,
+T. Lacroix, B. Rozi`ere, N. Goyal, E. Hambro, F. Azhar et al., "Llama:
+Open and efficient foundation language models," arXiv preprint
+arXiv:2302.13971, 2023.
+[20] L. Tunstall, E. Beeching, N. Lambert, N. Rajani, K. Rasul, Y. Belkada,
+S. Huang, L. von Werra, C. Fourrier, N. Habib et al., "Zephyr: Direct
+distillation of lm alignment," arXiv preprint arXiv:2310.16944, 2023.
+[21] M. Zago, M. G. P'erez, and G. M. P'erez, "Umudga: A dataset
+for profiling dga-based botnet," Computers & Security, vol. 92, p.
+101719, 2020.
+[22] K. VZiVza, P. Tadi'c, and P. Vuleti'c, "Dns exfiltration detection in the
+presence of adversarial attacks and modified exfiltrator behaviour,"
+International Journal of Information Security, vol. 22, no. 6, pp.
+1865-1880, 2023.

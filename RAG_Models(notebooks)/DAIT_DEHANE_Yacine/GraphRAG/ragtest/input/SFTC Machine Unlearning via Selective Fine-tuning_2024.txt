@@ -1,0 +1,1047 @@
+SFTC: Machine Unlearning via Selective Fine-tuning and
+Targeted Confusion
+Vasileios Perifanis*
+vperifan@ee.duth.gr
+Democritus University of Thrace
+Greece
+Efstathios Karypidis*
+e.karypidis@athenarc.gr
+National Technical University of Athens,
+Archimedes/Athena RC
+Greece
+Nikos Komodakis
+komod@csd.uoc.gr
+University of Crete, IACM-Forth, Archimedes/Athena RC
+Greece
+Pavlos S. Efraimidis
+pefraimi@ee.duth.gr
+Democritus University of Thrace, Athena RC
+Greece
+ABSTRACT
+As the importance of data privacy escalates in the modern digi-
+tal era, machine learning service operators face challenges posed
+by the stringent privacy regulations, such as the GDPR. To cope
+with these challenges, the concept of machine unlearning emerges
+as a key solution that meets data removal requirements, while
+maintaining trust and transparency, thereby reducing the risk of
+data breaches. In this work, we present a Selective Fine-tuning
+and Targeted Confusion (SFTC) algorithm for machine unlearn-
+ing. SFTC simultaneously performs fine-tuning on the remaining
+data and selectively confuses the original model by following the
+distribution of a biased random generator, effectively leading the
+forget samples' output space to be indistinguishable from that of the
+original test samples. Our algorithm is evaluated on three diverse
+datasets for image classification and its unlearning performance is
+compared against six state-of-the-art unlearning algorithms. The
+results show that SFTC preserves a model's original accuracy while
+effectively inducing forgetting on the requested data samples.
+CCS CONCEPTS
+* Computing methodologies -Machine learning algorithms;
+* Security and privacy -Human and societal aspects of se-
+curity and privacy; Digital rights management.
+KEYWORDS
+Machine Unlearning, Deep Learning, Data Privacy, Machine Learn-
+ing Security and Privacy
+ACM Reference Format:
+Vasileios Perifanis, Efstathios Karypidis, Nikos Komodakis, and Pavlos S.
+Efraimidis. 2024. SFTC: Machine Unlearning via Selective Fine-tuning and
+Targeted Confusion. In European Interdisciplinary Cybersecurity Conference
+*Both authors contributed equally to this research.
+This work is licensed under a Creative Commons Attribution International
+4.0 License.
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+ACM ISBN 979-8-4007-1651-5/24/06
+(EICC 2024), June 05-06, 2024, Xanthi, Greece. ACM, New York, NY, USA,
+INTRODUCTION
+Machine learning models, notably those like GPT and Dall-E, have
+revolutionized everyday tasks in various sectors [17]. Typically,
+these models are developed by collecting user data in a datacenter,
+followed by processing through machine learning pipelines [12].
+However, privacy regulations like the GDPR [23] require that ser-
+vice providers delete users' data upon request. In addition, from
+a security perspective, removing the influence of samples from
+machine learning models reduces model errors and the risk of ad-
+versarial attacks [24] like membership inference [19] and model
+inversion [5], which compromise service confidentiality.
+To meet users' requests and comply with regulations, service
+providers should erase not only the associated users' data but also
+modify their deployed models to reflect this deletion [16, 24, 25].
+The process of making trained learning models forget in a time-
+efficient manner is referred to as machine unlearning [2].
+The most straightforward approach for unlearning is to retrain
+the model from scratch without the forget set, a process called
+exact unlearning [22]. However, this method is impractical due to
+its significant computational costs and time consumption. Further-
+more, as data deletion requests can occur arbitrarily, retraining for
+each request is not feasible. Consequently, approximate unlearning
+[4, 7, 14] emerged as a key solution that modifies the original model
+efficiently while maintaining its predictive accuracy.
+In this work, we introduce an unlearning algorithm that adjusts
+the original model trained on the complete dataset. Our algorithm,
+Selective Fine-tuning and Targeted Confusion (SFTC) utilizes a
+teacher-student approach and ensures that the process does not ex-
+ceed 15% of the original training duration. Specifically, it fine-tunes
+the original model on the retain set (remaining data), while confus-
+ing it on the forget set using a biased random output generator.
+Our main contributions are summarized as follows:
+* We propose SFTC, a novel machine unlearning algorithm
+that refines the original model on the retain set, while dis-
+tancing its predictions on the forget set from those of the
+original model, using a biased random generator.
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+Perifanis and Karypidis, et al.
+* We introduce a new forget set benchmark on the FER-2013
+dataset, which includes samples from two classes and incor-
+porates in-context information. Specifically, the forget set
+consists of images from minors, providing a distinct context
+for evaluating the unlearning process.
+* We evaluate SFTC on a diverse set of datasets and compare
+it against six unlearning algorithms. Our results suggest that
+SFTC effectively induces forgetting on the requested data.
+The remainder is structured as follows. Section 2 outlines the con-
+cept of machine unlearning. Section 3 summarizes the related work.
+Section 4 introduces the SFTC algorithm. Section 5 presents the
+experimental results and compares SFTC with state-of-the-art un-
+learning algorithms. Finally, Section 6 concludes our work and
+discusses future directions.
+PROBLEM DEFINITION
+In this section, we formally define the problem of machine unlearn-
+ing given a trained model, the original dataset and the specified
+data subset that need to be forgotten.
+Machine Learning. Let a dataset D, represented as D = {(xi,yi)}N
+with Nsamples. Each sample consists of a d-dimensional feature
+vector xiRdand its corresponding label yi{0, ...,C-1} with
+Cbeing the number of classes. A machine learning algorithm f(*),
+where denotes the model parameters, is applied to D in a super-
+vised manner. The objective is to choose f(*) such that ^yi= f(xi)
+approximates the true label yi. To achieve this objective, we aim
+to minimize a loss LD= 1
+i=1 l(f(xi) ,yi), where lis a loss
+function, such as cross-entropy. In this work, we are interested
+in deep learning models, i.e., f(*) characterizes a neural network
+model Mwith multiple operational layers, defined by its weights .
+Machine Unlearning. Let the requested set of samples that needs
+to be forgotten is represented as DfD, which corresponds to a
+subset of the original dataset. The retain dataset (remaining data),
+Dr, is obtained by excluding Dffrom D, i.e., Dr= D \ Df. We
+assume that Dfcomprises a random subset from multiple classes.
+Given the original model Mwith weights trained on D, along
+with the retain set Drand the forget set Df, the goal is to apply
+an unlearning algorithm U(*). The unlearning process modifies the
+original model's weights into new weights u, resulting in a new
+model Mu. The goal for Muis to unlearn Df, while maintaining
+high utility (e.g., high accuracy), similar to the original model.
+Fig. 1 illustrates the process of machine unlearning from a service
+provider's point of view. Initially, users (data owners) share their
+data with the provider. After collection, the dataset is employed
+to train a machine learning model, which can generate useful pre-
+dictions for customers (model consumers), who can be either data
+owners or other external users. Following the service deployment, a
+subset of data owners request the deletion of their associated infor-
+mation. In response, the service provider should not only remove
+the data from their local databases but also make the previously
+trained model unlearn these data. This step is crucial to comply
+with the "right to be forgotten" directive of regulations such as the
+GDPR, which also fulfills users' desiderata.
+Figure 1: Overview of Machine Unlearning.
+RELATED WORK
+The concept of machine unlearning, introduced by Cao and Yang [2],
+focuses on efficient, exact data removal using summation methods
+based on statistical query learning. While efficient, this unlearn-
+ing algorithm is limited to simple algorithms such as Naive Bayes
+and cannot scale to more complex models like neural networks.
+Bourtoule et al. developed SISA [1], which partitions the original
+training dataset into disjoint shards, with each shard having its
+own isolated sub-model. When an unlearning request arrives, only
+the sub-models with that sample are being retrained. However, it
+necessitates initial adjustments in the training phase and may not
+be applicable in many scenarios due to the partitioning strategy.
+Ginart et al. [6] proposed a method for approximate unlearning,
+focused on k-means clustering, through quantization and data par-
+titioning. However, it is effective in models with a limited number
+of parameters, limiting its usability for neural networks.
+One of the earliest works for unlearning in deep neural networks,
+NegGrad [8], involves adjusting the original model parameters by
+using gradient ascent for the forget set. Choi [3] enhanced the Neg-
+Grad approach by including an additional fine-tuning loss term and
+introduced two real-world image datasets for evaluating machine
+unlearning algorithms. Graves et al. [10] proposed amnesiac un-
+learning where the forget samples are assigned a random label and
+fine-tuning is performed on the concatenation of the retain and for-
+get sets after re-labeling. Goel et al. [7] proposed two methods for
+unlearning, CF-k and EU-k forgetting. The former involves freezing
+the first k layers and performing fine-tuning using the rest model
+layers on the retain set and the latter starts by randomly initializing
+the rest layers before fine-tuning.
+Our proposed algorithm builds upon Bad-Teaching [4] and is
+closely related to the SCRUB [14] algorithm. Bad-Teaching uses a
+two-teacher approach, where the retain and forget samples are re-
+labeled to 0 and 1, respectively. Then, the student model is trained
+to generate a similar behavior to that of the original model on the
+retain set and a completely random model on the forget set. SCRUB
+combines fine-tuning on the retain set and minimizes the divergence
+between the student and original models on the retain set, while
+maximizing it on the forget set. Both Bad-Teaching and SCRUB try
+to confuse the model on the forget set with random predictions or
+by following a different direction. In this work, we argue that the
+above two methods might affect a larger number of samples than
+intended, particularly those in the retain or the original test set. To
+address this issue, we propose a method for targeted confusion on
+the forget set, using a controlled biased output generator.
+SFTC: Machine Unlearning via Selective Fine-tuning and Targeted Confusion
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+Evaluating Machine Unlearning. One of the most controversial
+aspects of machine unlearning is how to evaluate an unlearned
+model [7, 14, 21]. An ideal unlearning algorithm produces a model
+with high-quality predictions, similar to the original model, while
+ensuring that data are effectively forgotten. While it is straightfor-
+ward to compare the unlearned model's output with the original
+model, proving effective unlearning is more complex. Many studies
+assess this by comparing the unlearned model to one retrained from
+scratch on the available data [4, 14]. However, this method is often
+impractical and fails to address the stochastic variability in machine
+learning, implying that indistinguishability between an unlearned
+and a retrain-from-scratch model is not a reliable unlearning indi-
+cator [7, 21]. In this work, we evaluate our unlearning algorithm
+with both approaches to ensure comprehensive assessment.
+SELECTIVE FINE-TUNING AND TARGETED
+CONFUSION (SFTC)
+In this section, we introduce SFTC, a refined unlearning algorithm
+based on [4]. SFTC fine-tunes the original model on the retain set
+Dr, follows the original model Mtrained on the entire dataset D in
+terms of output distribution for Drand selectively tries to diverge
+its predictions from Mon the forget set Dfby following a biased
+random distribution generator Mb.
+In SFTC, the original model M, with weights , serves as the
+teacher model for Drand a random generator model Mbacts as
+the teacher for Df. Both models process an input sample xand
+produce a logit z(x), which is then transformed into a probability
+distribution via softmax activation. Our objective is to train a stu-
+dent model Muinitialized with and yield weights u, such that
+Muselectively forgets Dfwhile retaining knowledge from Dr.
+We begin our approach by augmenting the retain and forget set
+with a pseudo-label b{0, 1} assignment. Specifically, samples
+from Drare assigned b= 0 and those from Dfwith b= 1. This
+results in augmented with pseudo-labels sets D
+rand D
+f. These sets
+are then combined into a unified unlearning dataset Du= D
+The idea for assigning pseudo-labels was influenced by the Bad-
+Teaching unlearning approach [4], where the authors replaced the
+actual labels with pseudo-labels. The unlearning dataset Duis
+subsequently shuffled and partitioned into batches for training.
+Selective Fine-Tuning. To fulfill the predictive utility preservation
+requirement, the SFTC algorithm first performs a fine-tuning opera-
+tion on Dr. During training, the algorithm selects the samples that
+correspond to pseudo-label b= 0 and minimize the cross-entropy
+loss, defined as:
+CEr= -
+yiklog ( ^yik) ,
+where Nis the number of samples, Cis the number of classes, yik
+is 1 if the ground truth class of the ith sample is kand ^yikis the
+predicted probability of the ith sample belonging to class k.
+Targeted Confusion. Besides fine-tuning, SFTC uses the original
+model Mto guide the student model Mutowards a similar output
+distribution on Drand the random generator model Mbtowards
+differing output distribution on Df. Similar to the Bad-Teaching
+approach [4], we optimize the Kullback-Leibler (KL) divergence:
+KL = (1 -b) DKL(M(x) ||Mu(x)) + (b)DKL(Mb(x) ||Mu(x))
+= (1 -b)
+M(x) log
+ M(x)
+Mu(x)
++ (b)
+Mb(x) log
+ Mb(x)
+Mu(x)
+where bis the assigned pseudo-label, xis an input sample and
+M(*) (x) denotes the output of model M(*) for sample xafter apply-
+ing softmax. Note that the outputs of M(*) can be scaled according
+to a temperature parameter . By default, = 1.
+Optimizing the loss in Eq. 2 allows the student model to follow
+both teachers with respect to their output distribution on Drand
+Df, respectively. However, if we set a completely random model
+Mbas in [4] and we follow this random generator on the forget set,
+Mumay be confused on a larger fraction of samples. For instance,
+suppose that we have a specific sample that needs to be forgotten.
+This sample's features are very similar to that of a random sample's
+features belonging to the retain set. In this sense, if we make a
+random prediction on the forget sample, we will influence the
+model in making errors on similar retain samples. Consequently,
+this will lead the model to be confused in a larger fraction of samples
+than expected, which will further lead to inconsistencies.
+To address this issue and effectively confuse the student model,
+we propose a targeted approach using a biased random output
+generator. The generator tailors predictions for the forget set, which
+can vary from being completely random to being biased towards the
+correct class. The degree of bias is governed by a scalar c, allowing
+for controlling the confusion during unlearning.
+More precisely, the generator creates a random output distribu-
+tion for each input data, where the distribution's size is determined
+by the number of classes present in the original dataset. To generate
+the output, we sample from the normal distribution. Initially, the
+outputs are completely random. We then employ the scalar cto
+infuse a specific degree of confusion, adjusting the initial random-
+ness in a targeted manner. When c= 1, the outputs remain entirely
+random, similar to the Bad-Teaching approach [4]. In contrast, with
+c= 0, the output is carefully adjusted to align with the correct label
+for each sample. This adjustment involves adding a random number
+to the corresponding correct class index in the output distribution.
+By default, SFTC uses c= 0 and intuitively, the model retains the
+correct labels but its confidence in the forget set samples is reduced,
+leading to the desired targeted confusion.
+Our method is flexible, allowing any level of confusion between
+0 and 1, where higher values of cresult in greater confusion. This
+concept is similar to [10], where the target labels in the forget set
+are assigned randomly. To achieve this, we select the batch indices
+corresponding to forget samples, i.e., the samples with pseudo-
+label b= 1. Then, we get the number of samples to change their
+associated label by multiplying the number of forget samples in the
+batch with the scalar cand selecting as many samples uniformly
+at random. The selected samples are assigned a new label from
+[0,C-1] and the generator is biased towards these random labels.
+Putting it all together, SFTC optimizes both losses (Eq. 1 and 2)
+to effectively induce forgetting on Dfgoverned by the confusion
+fraction cwhile retaining high accuracy on Dr:
+LSFTC= CEr+ KL
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+Perifanis and Karypidis, et al.
+EXPERIMENTS
+In this section, we outline the experimental setup and assess the
+performance of different unlearning algorithms. 1
+Datasets
+We evaluate SFTC using three image datasets. Specifically, we con-
+sider the CIFAR-10 dataset [13], which consists of ten balanced
+classes with 5,000 images each. The forget set represents 10% of
+each class (500 images each) and is provided by Google.2 The sec-
+ond dataset is MUFAC [3], comprising facial images for age group
+prediction. The dataset is imbalanced and the forget set mirrors the
+original imbalance. Finally, we present a new forget set benchmark
+for evaluating unlearning on the FER-2013 dataset [9], which con-
+sists of facial expressions across seven imbalanced classes. For the
+forget set split, we consider a scenario aligning with a (conceptual)
+new legislative requirement, where images tagged with fear or sad-
+ness from minors should be removed from learning models. In this
+scenario, the forget set is limited to a subset of only two classes.
+Fig. 2 presents a sample from the facial images belonging to the
+FER-2013 forget set. Fig. 3 illustrates the distribution of samples
+per class across training, validation and test sets for each dataset as
+well as the distribution per class in the forget sets.
+Experimental Setup
+To assess the unlearning performance we first train the ResNet-
+18 [11] and EfficientNet-B0 [20] models on the original datasets.
+The former architecture has been thoroughly assessed in machine
+unlearning literature [4, 7, 8, 14] and the latter is considered as a
+more complex and lightweight architecture. For model training, we
+use the Adam optimizer with an initial learning rate of 10-3 and the
+cosine annealing scheduler for 30 epochs with a batch size of 64. All
+experiments were conducted five times with different initialization
+seeds on NVIDIA RTX 3060 GPU-equipped workstation running
+Ubuntu 20.04 and PyTorch 2.0.1.
+Unlearning Algorithms
+We compare our proposed SFTC unlearning algorithm against the
+following baselines and state-of-the-art approaches. Fine-Tuning
+(FT) is the simplest baseline, where we begin from the original
+model and fine-tune it on Drfor a limited number of epochs. Neg-
+Grad+ (NG+) [3, 8] combines fine-tuning on Drand maximizing
+the error on Df. In CF-k and EU-k Forgetting [7] the first k layers
+are frozen and only the last layers are being fine-tuned, where the
+CF-k approach begins from the original weights and EU-k randomly
+initializes the rest layers. Bad-Teaching (BD) [4] involves optimiz-
+ing the KL loss between the student and the original model on Dr
+and the KL loss between the student and a randomly initialized
+model on Df, similar to Eq. 2. SCRUB [14] performs fine-tuning
+on Dr(Eq. 1), minimizing the KL loss between the student model
+and the original model on Drand maximizing the KL loss on Df.
+Retrain (RT) represents the ideal case, where the model is trained
+from scratch on Dr.
+Fear
+Sadness
+Figure 2: FER-2013 Forget Samples.
+Class
+#Samples
+Train/Val/Test Split per Class
+Class
+500 500 500 500 500 500 500 500 500 500
+Forget Samples per Class
+Class
+#Samples
+Train
+Test
+Class
+Class
+#Samples
+Class
+(a) CIFAR-10
+(b) MUFAC
+(c) FER-2013
+Figure 3: Dataset Distributions.
+Evaluation Metrics
+Unlearning Accuracy. To evaluate the unlearning accuracy, we
+assess the predictive performance of the unlearned model Muon
+both the forget set Dfand test set Dtagainst a retrain-from-scratch
+oracle MR. The accuracy error between Muand MRis calculated
+using the Symmetric Absolute Percentage Error (SAPE) [15]:
+SAPE (a,b) = |b-a|
+b+ a.
+Specifically, we compute the following metrics:
+AccErr{Mu,MR} = SAPE
+Acc(Dt)
+MR, Acc(Dt)
+AccDis = SAPE
+Acc(Df)
+, Acc(Df)
+However, since obtaining the MRin real-world scenarios is often
+impractical, we also compare the accuracy of Muon Dtrelative to
+the original model M:
+AccErr{Mu,M} = SAPE
+Acc(Dt)
+, Acc(Dt)
+In all of the above accuracy error metrics, lower values indicate
+more successful unlearning. Specifically, Eq. 5 shows the unlearning
+effectiveness, Eq. 6 the unlearning certifiability (similarity in perfor-
+mance between Muand MR) and Eq. 7 evaluates post-unlearning
+robustness of Mucompared to Min terms of predictive accuracy.
+Distinguishability from Original Model. Based on related litera-
+ture [4, 8, 16, 24], the unlearning algorithm should produce a model
+Muthat is similar to a retrain-from-scratch oracle MR. Nevertheless,
+as already stated, having access to the MRis impractical. Hence, we
+SFTC: Machine Unlearning via Selective Fine-tuning and Targeted Confusion
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+Table 1: Unlearning Algorithms Comparison.
+ResNet-18
+EfficientNet-B0
+Data
+Method
+AccErr{Mu,MR}(|)
+AccDis(|)
+AccErr{Mu,M}(|)
+JS(|)
+MIA(|)
+AccErr{Mu,MR}(|)
+AccDis(|)
+AccErr{Mu,M}(|)
+JS(|)
+MIA(|)
+CIFAR-10
+0.0074
+0.0490
+0.2700
+0.0028
+0.0498
+0.3568
+0.0074
+0.3034
+0.4630
+0.0022
+0.4680
+0.0277
+0.0077
+0.0343
+0.3976
+0.4830
+0.0169
+0.0097
+0.0199
+0.4987
+0.0206
+0.0265
+0.0272
+0.1589
+0.3513
+0.0147
+0.0195
+0.0178
+0.4031
+CF-5
+0.0278
+0.0099
+0.0344
+0.4208
+0.4863
+0.0172
+0.0030
+0.0203
+0.4919
+EU-5
+0.0448
+0.0415
+0.0513
+0.6894
+0.5188
+0.0293
+0.0199
+0.0324
+0.4963
+SCRUB
+0.0349
+0.0139
+0.0489
+0.3164
+0.5374
+0.0234
+0.0086
+0.0265
+0.4898
+0.0089
+0.0092
+0.0155
+0.7294
+0.6085
+0.0109
+0.0064
+0.0140
+0.5332
+SFTC
+0.0096
+0.0054
+0.0162
+0.7076
+0.7049
+0.0091
+0.0057
+0.0121
+0.5473
+MUFAC
+0.0104
+0.3455
+0.2488
+0.0188
+0.2818
+0.4359
+0.0105
+1.0767
+0.6589
+0.0068
+0.3581
+0.5426
+0.0374
+0.0287
+0.0456
+0.9418
+0.6145
+0.0124
+0.0517
+0.0116
+0.3014
+0.5811
+0.0322
+0.1255
+0.0391
+0.4717
+0.4248
+0.0328
+0.0203
+0.0474
+0.3157
+0.5144
+CF-5
+0.0293
+0.0491
+0.0381
+0.8968
+0.6415
+0.0151
+0.0883
+0.0146
+0.2473
+0.5162
+EU-5
+0.0330
+0.0319
+0.0388
+0.9853
+0.5538
+0.0325
+0.0187
+0.0463
+0.3161
+0.5832
+SCRUB
+0.0117
+0.0292
+0.0302
+1.0059
+0.5931
+0.0134
+0.0414
+0.0219
+0.3304
+0.4924
+0.0282
+0.0258
+0.0362
+1.0232
+0.7364
+0.0169
+0.0209
+0.0195
+0.3729
+0.7853
+SFTC
+0.0271
+0.0277
+0.0339
+1.1057
+0.7541
+0.0164
+0.0108
+0.0138
+0.3529
+0.7724
+FER-2013
+0.0083
+0.6495
+0.1197
+0.0039
+0.6361
+0.1197
+0.0083
+3.5581
+0.7230
+0.0389
+2.4005
+0.6340
+0.0673
+0.0462
+0.0295
+2.2371
+0.6952
+0.0377
+0.0659
+0.0091
+1.2943
+0.6965
+0.0884
+0.2292
+0.0575
+2.4408
+0.5579
+0.0788
+0.1195
+0.0431
+0.5591
+CF-5
+0.0697
+0.0636
+0.0169
+2.1782
+0.7005
+0.0457
+0.0631
+0.0121
+1.2004
+0.6167
+EU-5
+0.0667
+0.1543
+0.0381
+2.5051
+0.6056
+0.0462
+0.1018
+0.0085
+0.6435
+SCRUB
+0.0938
+0.0725
+0.0912
+2.0631
+0.5321
+0.0949
+0.3355
+0.0488
+0.5591
+0.0655
+0.0404
+0.0287
+2.3148
+0.7017
+0.0491
+0.0568
+0.0127
+1.6802
+0.6278
+SFTC
+0.0649
+0.0436
+0.0281
+2.6859
+0.7061
+0.0438
+0.0537
+0.0162
+1.7451
+0.6543
+measure how similar Mubehaves on Dfcompared to the original
+model M, based on the Jensen-Shannon (JS) divergence:
+PDf||QDf
+2DKL
+PDf||R
+2DKL
+QDf||R
+where R= 1
+PDf+ QDf
+is the mean distribution and PDf, QDf
+are the output probability distributions of Muand Mover Df, re-
+spectively. We choose JS over KL divergence since JS provides a
+symmetric and smoothed measure of the difference between two
+probability distributions. Intuitively, post-unlearning, the model
+should treat the samples of Dfas unseen, similar to an indepen-
+dent test set. In this context, the outputs of Muand Mshould be
+distinguishable. A higher value of JS indicates a greater deviation
+from the original, suggesting effective unlearning.
+Verifiability and Privacy. To asses the verifiability/privacy aspect
+of machine unlearning, we perform a MIA [19] against Mu. We con-
+struct a balanced dataset by sampling an equal number of instances
+from both Drand Dt(with equivalent distributions) to train a MIA
+predictor. Specifically, we utilize the CatBoost classifier [18] as the
+attacker model using as input features the logit vectors produced
+from Mu. CatBoost has been empirically proven to significantly
+outperform other models like Logistic Regression and Support Vec-
+tor Machines with respect to MIA. The model is then applied on
+Dfto determine how many samples are correctly identified as non
+training members:
+MIA = TN
+|Df| .
+Higher values of this metric indicate higher privacy preservation for
+the forget samples and unlearning verification [24], i.e., the model's
+behavior on Dfis similar to that of unseen samples.
+Results
+To provide comprehensive results, we conducted a grid search
+across learning rates in {5 x 10-3, 4 x 10-3, ..., 10-5} to identify
+the most effective value for each algorithm, using Eq. 5, 6 and 7 as
+indicators for unlearning performance. All unlearning algorithms
+begin from the same original model for every dataset. We maintain
+the default unlearning hyper-parameters, i.e., the KL temperature
+to one, the confusion fraction for SFTC to zero and the k parameter
+for both CF-k and EU-k to five. For each algorithm, we establish a
+range of 1 to 4 epochs for the unlearning process to ensure that no
+algorithm exceeds 15% of the time required for complete retraining
+using the Adam optimizer and a batch size of 64. We keep the
+unlearned models at the epoch that achieved the best overall results
+across the five different trials. Finally, we report the average scores
+obtained from the most effective setting for each algorithm.
+Table 1 presents the comparative analysis for each unlearning
+algorithm across the three considered datasets and two model ar-
+chitectures. The highest performing unlearning algorithm for each
+metric is denoted with bold and the second best with an underline.
+The original model's (ORI) metrics are included as a reference.
+The evaluation of unlearning algorithms' efficacy requires con-
+sidering all metrics as a whole, i.e., we expect a low accuracy er-
+ror, high JS divergence and high MIA efficacy. For instance, if the
+original model remains unchanged, it exhibits no accuracy loss.
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+Perifanis and Karypidis, et al.
+Epochs
+Epochs
+Epochs
+CF-5
+Epochs
+EU-5
+Epochs
+SCRUB
+Epochs
+Epochs
+SFTC
+Retain
+Test
+Forget
+(a) Convergence on CIFAR-10. The target accuracy for the test and forget sets are 0.89 and 0.9, respectively.
+Epochs
+Epochs
+Epochs
+CF-5
+Epochs
+EU-5
+Epochs
+SCRUB
+Epochs
+Epochs
+SFTC
+(b) Convergence on MUFAC. The target accuracy for the test and forget sets are 0.59 and 0.49, respectively.
+Epochs
+Epochs
+Epochs
+CF-5
+Epochs
+EU-5
+Epochs
+SCRUB
+Epochs
+Epochs
+SFTC
+(c) Convergence on FER. The target accuracy for the test and forget sets are 0.63 and 0.21, respectively.
+Figure 4: Unlearning Algorithms Convergence. The blue line corresponds to the retain set, the green line to the test set and the
+red line to the forget set.
+However, this would also lead to no distinguishability as well as
+poor unlearning certifiability with respect to MIA.
+SFTC emerges as the most effective unlearning algorithm, having
+the highest quality in 12 individual cases and the second best in 14.
+BD is the next most successful, performing the best in 7 individual
+cases and second best in 9 cases. The similarity in performance
+between SFTC and BD is expected since they optimize the same KL
+term. However, SFTC's integrated mechanism of targeted confusion
+and selective fine-tuning further enhances unlearning effectiveness.
+On the ResNet-18 architecture, SFTC consistently ranks as the
+top or second best algorithm across all datasets, indicating robust
+unlearning. BD serves as the second most effective. Other algo-
+rithms like SCRUB and EU-5, show effectiveness in specific cases,
+such as low accuracy loss (MUFAC-SCRUB) and high distinguisha-
+bility (FER-EU-5). Nevertheless, SFTC and BD emerge as the top-
+performing algorithms when all metrics are considered collectively.
+For the EfficientNet model, while SFTC and BD maintain their
+high quality unlearning performance, the results show variability
+across datasets. For instance, in FER and MUFAC, the FT baseline
+leads to high quality, having the least accuracy loss with respect to
+the retrain-from-scratch oracle and high MIA efficacy in FER. Yet,
+SFTC and BD remain the most consistently effective algorithms.
+Most algorithms demonstrate high utility in terms of MIA, sub-
+stantially surpassing the original model, which fails to offer any
+unlearning certifiability. In many cases, they also exceed the utility
+of the retrain-from-scratch oracle, suggesting that unlearning algo-
+rithms can also mitigate issues like overfitting and model biases.
+In Fig. 4, we present the convergence of the considered unlearn-
+ing algorithms using a consistent trial with the same random initial-
+ization on the ResNet-18 model. For this experiment, we terminate
+the unlearning algorithm when the accuracy for Dtand Dfclosely
+approaches the corresponding retrain-from-scratch accuracies.
+For the FT baseline across all datasets, an initial decrease in
+accuracy in the first epoch is evident, followed by subsequent tun-
+ing towards Dr. Similar patterns are observed with the CF-5 and
+EU-5 approaches, where the initial epoch noticeably diverges the
+model from its original state. The NG+ algorithm demonstrates a
+consistent trend across all datasets, seemingly leading to a global
+forgetting, which is demonstrated by a reduction in accuracy for
+all sets. This suggests that NG+ induces global forgetting, rather
+than being limited to the Dfalone.
+SCRUB, in the CIFAR dataset, mirrors the NG+ pattern, reducing
+accuracy across all sets. In MUFAC, SCRUB initiates with a drop in
+all sets, subsequently elevating accuracy on Dr, with test accuracy
+remaining consistent. On the other hand, accuracy on Dfdisplays
+SFTC: Machine Unlearning via Selective Fine-tuning and Targeted Confusion
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+variability across epochs initiating with a drop, elevating closely
+to Drand then dropping near the retain-from-scratch target ac-
+curacy. In FER, SCRUB lowers Draccuracy across epochs while
+the accuracy for Dtpresents stability. Meanwhile, accuracy on Df
+demonstrates a consistent decline, with an uptick noted at epoch 4.
+For the BD and SFTC algorithms, we observe a similar pattern
+in CIFAR, with both models lowering the Dfaccuracy by approxi-
+mately 10% and Dtaccuracy by 1%, aligning with the target model's
+respective accuracies. In MUFAC and FER, BD lowers the predictive
+performance across all sets, with a higher impact on Dtcompared
+to the retrain-from-scratch model. In contrast, SFTC begins by
+reducing accuracy in MUFAC below the target, but by epoch 4,
+it surpasses BD in terms of target accuracy resemblance. In FER,
+SFTC's performance is akin to BD, albeit with closer Dtand Df
+accuracies to the target. These observations suggest that follow-
+ing a completely random model for the forget set (BD) negatively
+impacts a broader sample range. Hence, adopting a biased random
+model towards the correct labels for the forget set (SFTC) facilitates
+more precise forgetting in alignment with the target model. The
+effectiveness of the biased random model approach will be further
+clarified in the subsequent sensitivity analysis study.
+Sensitivity Analysis
+In this section, we conduct a sensitivity analysis to assess the impact
+of three hyper-parameters on the training dynamics of SFTC, i.e.,
+learning rate, KL divergence temperature () and confusion fraction
+(c). Fig. 5 presents the results regarding unlearning accuracy on Df
+and Dtas well as the MIA efficacy for Df(as defined in Eq. 9). We
+employ the ResNet-18 model, setting the number of epochs to two
+for CIFAR (Fig. 5a) and FER (Fig. 5c) and three for MUFAC (Fig. 5b).
+Learning Rate. We begin by applying different learning rates in
+the range [8 x 10-5, 9 x 10-5, . . . , 5 x 10-3], fixing and c to 1 and
+0, respectively (i.e., no temperature and biased output towards the
+correct label for Df). For CIFAR, lower learning rates (8 x 10-4 to
+5 x 10-4) are insufficient to induce forgetting since they marginally
+reduce the accuracy on Df. This pattern is also presented in MIA
+terms, where low MIA scores indicate that samples from Dfare
+predicted as members. Conversely, learning rates between 6 x 10-4
+to 10-3 result in a desirable balance, lowering the accuracy on Df
+and maintaining high accuracy on Dt. Similarly for MIA, there is an
+upward trend, indicating higher unlearning effectiveness. Learning
+rates above 2 x 10-3 cause a drop in both Dfand Dtaccuracies,
+indicating global forgetting, not tailored towards the forget set.
+In MUFAC, similar to CIFAR, there is a decline in the forget set
+accuracy as the learning rate increases. Nevertheless, there is no
+clear optimal learning rate range when considering the balance be-
+tween accuracy and MIA efficacy. Learning rates between 2 x 10-4
+to 8 x 10-4 achieve high MIA (>95%) but lower accuracy on Dt
+compared to the retrained-from-scratch oracle. This indicates a
+trade-off between the (unknown) target and unlearning accuracy.
+An optimal setting for MUFAC, considering a real-world scenario,
+where the retrain-from-scratch oracle is unavailable, lies around
+9 x 10-4, achieving balance in Dtand Dfaccuracies (0.5465 and
+0.6393, respectively) as well as high MIA (0.93). However, this set-
+ting results in a high similarity error when compared to the retrain-
+from-scratch oracle. On the other hand, considering the optimal
+Learning Rate
+Metrics
+Temperature
+Confusion Fraction
+Forget Acc
+Test Acc
+Forget MIA
+Original Forget Acc
+Original Test Acc
+Original MIA
+(a) Sensitivity analysis on CIFAR.
+Learning Rate
+Metrics
+Temperature
+Confusion Fraction
+(b) Sensitivity analysis on MUFAC.
+Learning Rate
+Metrics
+Temperature
+Confusion Fraction
+(c) Sensitivity analysis on FER.
+Figure 5: Sensitivity Analysis Results.
+model as the most relevant with respect to the retrain-from-scratch
+accuracy (4x10-3), this comes at the expense of MIA. Thus, a crucial
+open question is whether a retrain-from-scratch model should be
+used as reference across diverse datasets for evaluating unlearning.
+For FER, similar to MUFAC, lower learning rates result in higher
+MIA efficacy. We attribute this behavior to the dataset imbalance na-
+ture in contrast to the balanced CIFAR. The accuracy on Dtremains
+stable across learning rates, demonstrating SFTC's robustness. This
+is similar for Df, where unlearning is induced across the ranges of
+learning rates. The closest alignment with the retrain-from-scratch
+oracle is achieved with higher learning rates (e.g., 5 x 10-3), at the
+cost of reduced MIA efficacy, similar to MUFAC. These findings
+suggest the need for further investigation into machine unlearning
+evaluation criteria without relying on a retrain-from-scratch oracle.
+KL Temperature. To assess the impact of KL temperature, we
+conduct experiments using [0.5, 5] with a 0.5 step and keep the
+learning rate for CIFAR to 7 x 10-4, MUFAC to 4 x 10-3 and FER
+to 5 x 10-3. These values were the most optimal with respect to Eq.
+EICC 2024, June 05-06, 2024, Xanthi, Greece
+Perifanis and Karypidis, et al.
+5, 6 and 7 regarding the model's accuracy and did not consider the
+MIA efficacy. In all datasets, the accuracy on Dtdoes not present
+high variations and remains constant across different temperature
+values. In CIFAR, higher values lead to increased accuracy on Df,
+while in MUFAC and FER, a reverse trend is evident. Interestingly, a
+temperature of 1 consistently results in high MIA efficacy, suggest-
+ing that SFTC's default = 1 is robust and effective for inducing
+unlearning, without needing precise temperature adjustments.
+Confusion Fraction. Recall that under SFTC, the model tries to
+follow a biased output generation when considering c< 1 and a
+completely random output when c= 1 (similar to BD [4]). Our intu-
+ition was that by following a completely random output as in BD or
+by maximizing a loss term as in SCRUB, the model can be affected
+in a larger fraction of samples, not only those in Df, leading to de-
+creased unlearning performance. Across all datasets, as cincreases,
+the accuracy on Dfdecreases, while the corresponding Dtremains
+stable with a slight decline. This highlights the potential benefits of
+using a biased output generator. Another interesting observation is
+that as MIA increases, the forget set accuracy decreases, indicating
+a trade-off between accuracy and MIA efficacy. This behavior is
+expected since the model loses more information regarding Dfas
+accuracy decreases, thereby increasing MIA efficacy. However, the
+optimal unlearned model lies between these two aspects, suggest-
+ing that incorporating such information during training could lead
+to improved unlearning algorithms.
+CONCLUSION
+In this work, we present a novel algorithm that refines an original
+model by fine-tuning it on the retain set while selectively confusing
+it through a biased random generator on the forget set. Our ap-
+proach is evaluated on three diverse datasets using two deep neural
+network architectures for image classification tasks. Our results
+demonstrate that SFTC effectively induces forgetting and serves
+as one of the most promising unlearning algorithms compared to
+similar methods in terms of unlearning effectiveness, certifiability
+and verification. In addition, we present a realistic forget set for the
+FER-2013 dataset, tailored to include contextual information. Our
+findings highlight the variability in the performance of unlearning
+algorithms across different dataset types (balanced vs imbalanced)
+and illustrate a trade-off between the effectiveness of unlearning in
+maintaining both high accuracy and privacy preservation.
+In the future, we aim to explore the effectiveness of SFTC on addi-
+tional datasets including tabular, language and graph-based data. To
+demonstrate the generalization and scalability of machine unlearn-
+ing it is crucial to encompass diverse tasks, such as regression and
+recommendation. Another critical aspect is the definition of novel
+unlearning metrics that do not rely on a retain-from-scratch oracle,
+which in real-world scenarios cannot be obtained. Lastly, another
+dimension is to evaluate machine unlearning under differentially-
+private models to provide insights on the dynamics of unlearning
+algorithms within environments that prioritize high privacy levels.
+ACKNOWLEDGMENTS
+This work has been partially supported by project MIS 5154714 of
+the National Recovery and Resilience Plan Greece 2.0 funded by
+the European Union under the NextGenerationEU Program.
+REFERENCES
+[1] Lucas Bourtoule, Varun Chandrasekaran, Christopher A Choquette-Choo, Hen-
+grui Jia, Adelin Travers, Baiwu Zhang, David Lie, and Nicolas Papernot. 2021.
+Machine unlearning. In 2021 IEEE Symposium on SP. IEEE, 141-159.
+[2] Yinzhi Cao and Junfeng Yang. 2015. Towards making systems forget with machine
+unlearning. In 2015 IEEE symposium on SP. IEEE, 463-480.
+[3] Dasol Choi and Dongbin Na. 2023. Towards Machine Unlearning Benchmarks:
+Forgetting the Personal Identities in Facial Recognition Systems. arXiv preprint
+arXiv:2311.02240 (2023).
+[4] Vikram S Chundawat, Ayush K Tarun, Murari Mandal, and Mohan Kankanhalli.
+2023. Can bad teaching induce forgetting? Unlearning in deep networks us-
+ing an incompetent teacher. In Proceedings of the AAAI Conference on Artificial
+Intelligence, Vol. 37. 7210-7217.
+[5] Matt Fredrikson, Somesh Jha, and Thomas Ristenpart. 2015. Model Inversion
+Attacks That Exploit Confidence Information and Basic Countermeasures. In
+Proceedings of the 22nd ACM SIGSAC Conference on Computer and Communications
+Security. Association for Computing Machinery, New York, NY, USA, 1322-1333.
+[6] Antonio Ginart, Melody Guan, Gregory Valiant, and James Y Zou. 2019. Mak-
+ing AI Forget You: Data Deletion in Machine Learning. In Advances in Neural
+Information Processing Systems, Vol. 32.
+[7] Shashwat Goel, Ameya Prabhu, Amartya Sanyal, Ser-Nam Lim, Philip Torr, and
+Ponnurangam Kumaraguru. 2022. Towards adversarial evaluations for inexact
+machine unlearning. arXiv preprint arXiv:2201.06640 (2022).
+[8] Aditya Golatkar, Alessandro Achille, and Stefano Soatto. 2020. Eternal Sunshine
+of the Spotless Net: Selective Forgetting in Deep Networks. In 2020 IEEE/CVF
+Conference on Computer Vision and Pattern Recognition (CVPR). 9301-9309.
+[9] Ian J Goodfellow, Dumitru Erhan, Pierre Luc Carrier, Aaron Courville, Mehdi
+Mirza, Ben Hamner, Will Cukierski, Yichuan Tang, David Thaler, Dong-Hyun
+Lee, et al. 2013. Challenges in representation learning: A report on three machine
+learning contests. In Neural Information Processing: 20th International Conference,
+ICONIP 2013, Daegu, Korea, November 3-7, 2013. Springer, 117-124.
+[10] Laura Graves, Vineel Nagisetty, and Vijay Ganesh. 2021. Amnesiac machine
+learning. In Proceedings of the AAAI Conference, Vol. 35. 11516-11524.
+[11] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. 2016. Deep residual
+learning for image recognition. In Proceedings of the IEEE conference on computer
+vision and pattern recognition. 770-778.
+[12] Dominik Kreuzberger, Niklas Kuhl, and Sebastian Hirschl. 2023. Machine Learn-
+ing Operations (MLOps): Overview, Definition, and Architecture. IEEE Access 11
+(2023), 31866-31879.
+[13] Alex Krizhevsky, Geoffrey Hinton, et al. 2009. Learning multiple layers of features
+from tiny images. (2009).
+[14] Meghdad Kurmanji, Peter Triantafillou, and Eleni Triantafillou. 2023. Towards
+Unbounded Machine Unlearning. In NeurIPS 2023. PMLR.
+[15] Ananth Mahadevan and Michael Mathioudakis. 2021. Certifiable machine un-
+learning for linear models. arXiv preprint arXiv:2106.15093 (2021).
+[16] Thanh Tam Nguyen, Thanh Trung Huynh, Phi Le Nguyen, Alan Wee-Chung
+Liew, Hongzhi Yin, and Quoc Viet Hung Nguyen. 2022. A survey of machine
+unlearning. arXiv preprint arXiv:2209.02299 (2022).
+[17] Andrei Paleyes, Raoul-Gabriel Urma, and Neil D. Lawrence. 2022. Challenges in
+Deploying Machine Learning: A Survey of Case Studies. ACM Comput. Surv. 55,
+6, Article 114 (dec 2022), 29 pages.
+[18] Liudmila Prokhorenkova, Gleb Gusev, Aleksandr Vorobev, Anna Veronika Doro-
+gush, and Andrey Gulin. 2018. CatBoost: unbiased boosting with categorical
+features. Advances in neural information processing systems 31 (2018).
+[19] Reza Shokri, Marco Stronati, Congzheng Song, and Vitaly Shmatikov. 2017. Mem-
+bership Inference Attacks Against Machine Learning Models. In 2017 IEEE Sym-
+posium on SP. 3-18.
+[20] Mingxing Tan and Quoc Le. 2019. Efficientnet: Rethinking model scaling for
+convolutional neural networks. In International conference on machine learning.
+PMLR, 6105-6114.
+[21] Anvith Thudi, Hengrui Jia, Ilia Shumailov, and Nicolas Papernot. 2022. On the
+necessity of auditable algorithmic definitions for machine unlearning. In 31st
+USENIX Security Symposium (USENIX Security 22). 4007-4022.
+[22] Enayat Ullah, Tung Mai, Anup Rao, Ryan A. Rossi, and Raman Arora. 2021.
+Machine Unlearning via Algorithmic Stability. In Proceedings of Thirty Fourth
+Conference on Learning Theory. PMLR, 4126-4142.
+[23] Eduard Fosch Villaronga, Peter Kieseberg, and Tiffany Li. 2018. Humans for-
+get, machines remember: Artificial intelligence and the right to be forgotten.
+Computer Law & Security Review 34, 2 (2018), 304-313.
+[24] Heng Xu, Tianqing Zhu, Lefeng Zhang, Wanlei Zhou, and Philip S. Yu. 2023.
+Machine Unlearning: A Survey. ACM Comput. Surv. 56, 1, Article 9 (aug 2023).
+[25] Haibo Zhang, Toru Nakamura, Takamasa Isohara, and Kouichi Sakurai. 2023. A
+review on machine unlearning. SN Computer Science 4, 4 (2023), 337.

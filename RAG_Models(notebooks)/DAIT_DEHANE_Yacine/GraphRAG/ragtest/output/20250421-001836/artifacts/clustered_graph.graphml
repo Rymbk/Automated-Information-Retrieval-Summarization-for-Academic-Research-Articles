@@ -1,0 +1,590 @@
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="d13" for="edge" attr.name="level" attr.type="long" />
+  <key id="d12" for="edge" attr.name="human_readable_id" attr.type="long" />
+  <key id="d11" for="edge" attr.name="id" attr.type="string" />
+  <key id="d10" for="edge" attr.name="source_id" attr.type="string" />
+  <key id="d9" for="edge" attr.name="description" attr.type="string" />
+  <key id="d8" for="edge" attr.name="weight" attr.type="double" />
+  <key id="d7" for="node" attr.name="level" attr.type="long" />
+  <key id="d6" for="node" attr.name="cluster" attr.type="string" />
+  <key id="d5" for="node" attr.name="id" attr.type="string" />
+  <key id="d4" for="node" attr.name="human_readable_id" attr.type="long" />
+  <key id="d3" for="node" attr.name="degree" attr.type="long" />
+  <key id="d2" for="node" attr.name="source_id" attr.type="string" />
+  <key id="d1" for="node" attr.name="description" attr.type="string" />
+  <key id="d0" for="node" attr.name="type" attr.type="string" />
+  <graph edgedefault="undirected">
+    <node id="&quot;HERBERT WOISETSCHLAGER, ALEXANDER ERBEN, SHIQIANG WANG, RUBEN MAYER, AND HANS-ARNO JACOBSEN&quot;">
+      <data key="d0">"PERSON", "ORGANIZATION")("ENTITY"</data>
+      <data key="d1">"ACM Reference Format"</data>
+      <data key="d2">e9aa2e30f8a16ab2a2fa9be1c46e9de1</data>
+      <data key="d3">0</data>
+      <data key="d4">0</data>
+      <data key="d5">b45241d70f0e43fca764df95b2b81f77</data>
+    </node>
+    <node id="&quot;AGX ORIN&quot;">
+      <data key="d0">"ORGANIZATION", "AGX ORIN"</data>
+      <data key="d1">"person"</data>
+      <data key="d2">0d66389e93327df8f525277dda4617e5</data>
+      <data key="d3">0</data>
+      <data key="d4">1</data>
+      <data key="d5">4119fd06010c494caa07f439b333f4c5</data>
+    </node>
+    <node id="&quot;ORGANIZATION&quot;">
+      <data key="d0">"THE ORGANIZATION IS NOT EXPLICITLY MENTIONED BUT CAN BE INFERRED AS THE ONE WORKING ON CREATING COMPREHENSIVE AND INTELLIGENT SYSTEMS.")("ENTITY"</data>
+      <data key="d1"> The Organization, a prominent entity, holds a significant position within the realm of Artificial Intelligence (AI) and Machine Learning. Despite some references to a potential individual association ("person"), it is primarily recognized for its contributions in the advanced technological fields of AI and machine learning.</data>
+      <data key="d2">7befbf2cdd18e8189b0f6e34637a77f3,7c22470c6324e4c2499e531c31b74578</data>
+      <data key="d3">0</data>
+      <data key="d4">2</data>
+      <data key="d5">d3835bf3dda84ead99deadbeac5d0d7d</data>
+    </node>
+    <node id="&quot;GNNS&quot;">
+      <data key="d0">"TECHNOLOGY"</data>
+      <data key="d1">"GNNs" refers to Graph Neural Networks, a type of artificial intelligence.</data>
+      <data key="d2">242307f545da2144b2e3affbd99017d2</data>
+      <data key="d3">1</data>
+      <data key="d4">3</data>
+      <data key="d5">077d2820ae1845bcbb1803379a3d1eae</data>
+    </node>
+    <node id="&quot;AI AND MACHINE LEARNING LANDSCAPE&quot;">
+      <data key="d0">"CONCEPT"</data>
+      <data key="d1">"AI and Machine Learning Landscape" is the field where GNNs are used and will become more integral.</data>
+      <data key="d2">242307f545da2144b2e3affbd99017d2</data>
+      <data key="d3">0</data>
+      <data key="d4">4</data>
+      <data key="d5">3671ea0dd4e84c1a9b02c5ab2c8f4bac</data>
+    </node>
+    <node id="&quot;QUANTUM COMPUTING&quot;">
+      <data key="d0">"TECHNOLOGY"</data>
+      <data key="d1">"Quantum Computing" is a technology that can enhance the capabilities of GNNs.</data>
+      <data key="d2">242307f545da2144b2e3affbd99017d2</data>
+      <data key="d3">1</data>
+      <data key="d4">5</data>
+      <data key="d5">19a7f254a5d64566ab5cc15472df02de</data>
+    </node>
+    <node id="&quot;ADVANCEMENTS&quot;">
+      <data key="d0">"EVENT"</data>
+      <data key="d1">"Advancements" refers to the continuous improvements in GNNs and their capabilities.)&lt;|COMPLETE|&gt;</data>
+      <data key="d2">242307f545da2144b2e3affbd99017d2</data>
+      <data key="d3">0</data>
+      <data key="d4">6</data>
+      <data key="d5">e7ffaee9d31d4d3c96e04f911d0a8f9e</data>
+    </node>
+    <node id="&quot;DEEPSET&quot;">
+      <data key="d0">"ORGANIZATION", "MOLLER ET AL."</data>
+      <data key="d1"> The DEEPSET, established in 2023, is an annotation tool. It is associated with a person who hails from Germany.</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a,af767269307bcd4abab0dc93481d3a9c</data>
+      <data key="d3">0</data>
+      <data key="d4">7</data>
+      <data key="d5">f7e11b0e297a44a896dc67928368f600</data>
+    </node>
+    <node id="&quot;SQUAD DATASET&quot;">
+      <data key="d0">"EVENT", "RAJPURKAR ET AL."</data>
+      <data key="d1">"person", "Cloud-era Fast Forward Labs"</data>
+      <data key="d2">af767269307bcd4abab0dc93481d3a9c</data>
+      <data key="d3">0</data>
+      <data key="d4">8</data>
+      <data key="d5">1fd3fa8bb5a2408790042ab9573779ee</data>
+    </node>
+    <node id="&quot;HUGGINGFACE COMMUNITY&quot;">
+      <data key="d0">"ORGANIZATION", "WOLF ET AL."</data>
+      <data key="d1">"person", "QA models"</data>
+      <data key="d2">af767269307bcd4abab0dc93481d3a9c</data>
+      <data key="d3">0</data>
+      <data key="d4">9</data>
+      <data key="d5">27f9fbe6ad8c4a8b9acee0d3596ed57c</data>
+    </node>
+    <node id="&quot;QUESTION ANSWERING&quot;">
+      <data key="d0">"EVENT", "TAGGING"</data>
+      <data key="d1">"concept", "annotation tool"</data>
+      <data key="d2">af767269307bcd4abab0dc93481d3a9c</data>
+      <data key="d3">0</data>
+      <data key="d4">10</data>
+      <data key="d5">e1fd0e904a53409aada44442f23a51cb</data>
+    </node>
+    <node id="&quot;HAN ET AL.&quot;">
+      <data key="d0">"PERSON", "HAN ET AL."</data>
+      <data key="d1">"authors", ""</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">0</data>
+      <data key="d4">11</data>
+      <data key="d5">de988724cfdf45cebfba3b13c43ceede</data>
+    </node>
+    <node id="&quot;HLEPOR METRIC&quot;">
+      <data key="d0">"EVALUATION METRIC", "HLEPOR"</data>
+      <data key="d1">"abbreviation", "2013"</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">0</data>
+      <data key="d4">12</data>
+      <data key="d5">96aad7cb4b7d40e9b7e13b94a67af206</data>
+    </node>
+    <node id="&quot;HAN ET AL., 2011&quot;">
+      <data key="d0">"EVENT", "2011"</data>
+      <data key="d1">"year", ""</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">0</data>
+      <data key="d4">13</data>
+      <data key="d5">c9632a35146940c2a86167c7726d35e9</data>
+    </node>
+    <node id="&quot;CLASSIFICATION DIFFICULTY&quot;">
+      <data key="d0">"CONCEPT", "CLASSIFICATION DIFFICULTY"</data>
+      <data key="d1">"term", ""</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">1</data>
+      <data key="d4">14</data>
+      <data key="d5">9646481f66ce4fd2b08c2eddda42fc82</data>
+    </node>
+    <node id="&quot;IBAN, E-MAIL ADDRESS, POSTAL CODES&quot;">
+      <data key="d0">"FEATURES", "IBAN"</data>
+      <data key="d1">"International Bank Account Number", "E-mail address"</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">1</data>
+      <data key="d4">15</data>
+      <data key="d5">d91a266f766b4737a06b0fda588ba40b</data>
+    </node>
+    <node id="&quot;RULE-BASED (E.G., REGULAR EXPRESSIONS)&quot;">
+      <data key="d0">"EXTRACTION METHODS", "RULE-BASED"</data>
+      <data key="d1">"method", "regular expressions"</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">1</data>
+      <data key="d4">16</data>
+      <data key="d5">bc0e3f075a4c4ebbb7c7b152b65a5625</data>
+    </node>
+    <node id="&quot;NAMED ENTITIES (E.G., ORGANIZATION, PERSON NAME, PLACE)&quot;">
+      <data key="d0">"FEATURES", "ORGANIZATION"</data>
+      <data key="d1">"type of named entity", "person name"</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">1</data>
+      <data key="d4">17</data>
+      <data key="d5">254770028d7a4fa9877da4ba0ad5ad21</data>
+    </node>
+    <node id="&quot;TRAINED EXTRACTION MODELS (E.G., NAMED ENTITY RECOGNITION (NER))&quot;">
+      <data key="d0">"EXTRACTION METHODS", "TRAINED EXTRACTION MODELS"</data>
+      <data key="d1">"method", "Named Entity Recognition (NER)"</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">1</data>
+      <data key="d4">18</data>
+      <data key="d5">4a67211867e5464ba45126315a122a8a</data>
+    </node>
+    <node id="&quot;CAUSE OF AN&quot;">
+      <data key="d0">("NOT SPECIFIED"</data>
+      <data key="d1">"not specified")</data>
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">0</data>
+      <data key="d4">19</data>
+      <data key="d5">04dbbb2283b845baaeac0eaf0c34c9da</data>
+    </node>
+    <node id="&quot;FEATURES&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">2</data>
+      <data key="d4">20</data>
+      <data key="d5">1943f245ee4243bdbfbd2fd619ae824a</data>
+    </node>
+    <node id="&quot;CONCEPT&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">1</data>
+      <data key="d4">21</data>
+      <data key="d5">273daeec8cad41e6b3e450447db58ee7</data>
+    </node>
+    <node id="&quot;EXTRACTION METHODS&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d3">2</data>
+      <data key="d4">22</data>
+      <data key="d5">e69dc259edb944ea9ea41264b9fcfe59</data>
+    </node>
+    <node id="&quot;ASSESSOR NAME&quot;">
+      <data key="d0">"PERSON", "ENTITY"</data>
+      <data key="d1">"Last Name"</data>
+      <data key="d2">4260788bdb4fd503d8f8d5b2d7ccae2b</data>
+      <data key="d3">0</data>
+      <data key="d4">23</data>
+      <data key="d5">e2f5735c7d714423a2c4f61ca2644626</data>
+    </node>
+    <node id="&quot;DEUTSCHE FORSCHUNGSGEMEINSCHAFT (DFG)&quot;">
+      <data key="d0">"ORGANIZATION"</data>
+      <data key="d1">"The Deutsche Forschungsgemeinschaft (DFG) is an organization that funded the research.")("entity"</data>
+      <data key="d2">b7e863efd5e5e29a71319c8d8b12c29d</data>
+      <data key="d3">0</data>
+      <data key="d4">24</data>
+      <data key="d5">deece7e64b2a4628850d4bb6e394a9c3</data>
+    </node>
+    <node id="&quot;DGA DATASET&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">3</data>
+      <data key="d7">0</data>
+      <data key="d3">4</data>
+      <data key="d4">25</data>
+      <data key="d5">e657b5121ff8456b9a610cfaead8e0cb</data>
+    </node>
+    <node id="&quot;BERT-FT&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">0</data>
+      <data key="d7">0</data>
+      <data key="d3">3</data>
+      <data key="d4">26</data>
+      <data key="d5">bf4e255cdac94ccc83a56435a5e4b075</data>
+    </node>
+    <node id="&quot;ROBERTA-FT&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">2</data>
+      <data key="d7">0</data>
+      <data key="d3">3</data>
+      <data key="d4">27</data>
+      <data key="d5">3b040bcc19f14e04880ae52881a89c1c</data>
+    </node>
+    <node id="&quot;LLAMA3-FT&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">1</data>
+      <data key="d7">0</data>
+      <data key="d3">3</data>
+      <data key="d4">28</data>
+      <data key="d5">3d6b216c14354332b1bf1927ba168986</data>
+    </node>
+    <node id="&quot;ZEPHYR-FT&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">3</data>
+      <data key="d7">0</data>
+      <data key="d3">3</data>
+      <data key="d4">29</data>
+      <data key="d5">1c109cfdc370463eb6d537e5b7b382fb</data>
+    </node>
+    <node id="&quot;NYMAIM&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">0</data>
+      <data key="d7">0</data>
+      <data key="d3">1</data>
+      <data key="d4">30</data>
+      <data key="d5">3d0dcbc8971b415ea18065edc4d8c8ef</data>
+    </node>
+    <node id="&quot;KRAKEN&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">2</data>
+      <data key="d7">0</data>
+      <data key="d3">1</data>
+      <data key="d4">31</data>
+      <data key="d5">68105770b523412388424d984e711917</data>
+    </node>
+    <node id="&quot;DYRE&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">1</data>
+      <data key="d7">0</data>
+      <data key="d3">1</data>
+      <data key="d4">32</data>
+      <data key="d5">85c79fd84f5e4f918471c386852204c5</data>
+    </node>
+    <node id="&quot;VIRUT&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">3</data>
+      <data key="d7">0</data>
+      <data key="d3">1</data>
+      <data key="d4">33</data>
+      <data key="d5">eae4259b19a741ab9f9f6af18c4a0470</data>
+    </node>
+    <node id="&quot;ACCURACY&quot;">
+      <data key="d0" />
+      <data key="d1" />
+      <data key="d2">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d6">1</data>
+      <data key="d7">0</data>
+      <data key="d3">4</data>
+      <data key="d4">34</data>
+      <data key="d5">3138f39f2bcd43a69e0697cd3b05bc4d</data>
+    </node>
+    <node id="&quot;LLM MODEL&quot;">
+      <data key="d0">"ORGANIZATION", "LLM MODEL"</data>
+      <data key="d1">"person", "Full Dataset"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">35</data>
+      <data key="d5">dde131ab575d44dbb55289a6972be18f</data>
+    </node>
+    <node id="&quot;5.4. PERFORMANCE ON FULL DATASET AND COMPARE&quot;">
+      <data key="d0">"EVENT", "TABLE 7"</data>
+      <data key="d1">"geo", "Our LLAMA3-FT"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">36</data>
+      <data key="d5">de9e343f2e334d88a8ac7f8813a915e5</data>
+    </node>
+    <node id="&quot;PERFORMANCE&quot;">
+      <data key="d0">"CONCEPT", "LLAMA3-FT"</data>
+      <data key="d1">"organization", "other model"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">37</data>
+      <data key="d5">e2bf260115514fb3b252fd879fb3e7be</data>
+    </node>
+    <node id="&quot;OUR LLAMA3-FT OUTPERFORMS OTHER MODEL&quot;">
+      <data key="d0">"EVENT", "LLAMA3-FT"</data>
+      <data key="d1">"organization", "in terms of performance over different metrics"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">38</data>
+      <data key="d5">b462b94ce47a4b8c8fffa33f7242acec</data>
+    </node>
+    <node id="&quot;HOWEVER, THE LLAMA3-FT AND ZEPHYR-FT MODEL NUMBER OF SAMPLE PROCESSING OVER TRAIN, VALIDATION, AND INFERENCE IS MUCH LESS COMPARED TO BERT-FT AND ROBERTA-FT AS THEY HAVE LARGE NUMBER OF PARAMETERS.&quot;">
+      <data key="d0">"EVENT", "LLAMA3-FT"</data>
+      <data key="d1">"organization", "BERT-FT"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">39</data>
+      <data key="d5">17ed1d92075643579a712cc6c29e8ddb</data>
+    </node>
+    <node id="&quot;THE PERFORMANCE OF OUR LLAMA3-FT MODEL SURPASSES THAT OF THE MODEL DEVELOPED BY CUCCHIARELL ET AL. [8] ON THE UMDGA DATASETS.&quot;">
+      <data key="d0">"EVENT", "CUCCHIARELL ET AL. [8]"</data>
+      <data key="d1">"person", "UMDGA datasets"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">40</data>
+      <data key="d5">3ce7c210a21b4deebad7cc9308148d86</data>
+    </node>
+    <node id="&quot;ADDITIONALLY, OUR DEVELOPED FINE-TUNED MODEL OUTPERFORMS PREVIOUS WORK [10], [11], [13].&quot;">
+      <data key="d0">"EVENT", "[10]", "[11]", "[13]"</data>
+      <data key="d1">"person"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">41</data>
+      <data key="d5">d64ed762ea924caa95c8d06f072a9a96</data>
+    </node>
+    <node id="&quot;WE COMPARED THE PERFORMANCE OF OUR FINE-TUNED MODEL WITH NATURAL LANGUAGE PROCESSING TECHNIQUES, SUCH AS N-GRAM METHODS [8],&quot;">
+      <data key="d0">"EVENT", "N-GRAM METHODS"</data>
+      <data key="d1">"person", "[8]"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">42</data>
+      <data key="d5">adf4ee3fbe9b4d0381044838c4f889c8</data>
+    </node>
+    <node id="&quot;USING THE 25-DGA DATASET OVER BOTH THE FULL DOMAIN NAME AND WITHOUT THE TOP-LEVEL DOMAIN.&quot;">
+      <data key="d0">"EVENT", "25-DGA DATASET"</data>
+      <data key="d1">"geo"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">43</data>
+      <data key="d5">32ee140946e5461f9275db664dc541a5</data>
+    </node>
+    <node id="&quot;OUR FINE-TUNED MODEL'S ACCURACY WAS SLIGHTLY LOWER, BY ABOUT 0&quot;">
+      <data key="d0">"EVENT", "ACCURACY"</data>
+      <data key="d1">"concept"</data>
+      <data key="d2">5eaa6164bae38347fdd4d10f01ad25aa</data>
+      <data key="d3">0</data>
+      <data key="d4">44</data>
+      <data key="d5">c160b9cb27d6408ba6ab20214a2f3f81</data>
+    </node>
+    <node id="&quot;INTERNATIONAL JOURNAL OF INFORMATION SECURITY&quot;">
+      <data key="d0">"ORGANIZATION"</data>
+      <data key="d1">"The International Journal of Information Security is a publication in the field of information security.")\("entity"</data>
+      <data key="d2">af424a30d8d92e60334f94be4ab24e4f</data>
+      <data key="d3">0</data>
+      <data key="d4">45</data>
+      <data key="d5">23527cd679ff4d5a988d52e7cd056078</data>
+    </node>
+    <node id="&quot;4 (2023)&quot;">
+      <data key="d0">"EVENT"</data>
+      <data key="d1">"4 (2023)" is an event that occurred in the year 2023.)("entity"</data>
+      <data key="d2">06a986a0140a34b691253bcd0f9b5c91</data>
+      <data key="d3">0</data>
+      <data key="d4">46</data>
+      <data key="d5">f1c6eed066f24cbdb376b910fce29ed4</data>
+    </node>
+    <node id="&quot;COMBINATION OF WINOGRANDE AND OASST&quot;">
+      <data key="d0">"ORGANIZATION")("ENTITY"</data>
+      <data key="d1">"We"</data>
+      <data key="d2">1cdbe4e7ce96e5775b39613f307fdbba</data>
+      <data key="d3">0</data>
+      <data key="d4">47</data>
+      <data key="d5">83a6cb03df6b41d8ad6ee5f6fef5f024</data>
+    </node>
+    <node id="&quot;LLAMA-BASE&quot;">
+      <data key="d0">"ORGANIZATION", "A SENTENCE."</data>
+      <data key="d1">"event")   ("relationship"</data>
+      <data key="d2">9d8ef23904ed09dbd34799abbf9df3ba</data>
+      <data key="d3">0</data>
+      <data key="d4">48</data>
+      <data key="d5">147c038aef3e4422acbbc5f7938c4ab8</data>
+    </node>
+    <node id="&quot;MIAMI&quot;">
+      <data key="d0">"GEO"</data>
+      <data key="d1">"Miami is a location where the event or activity being discussed takes place."</data>
+      <data key="d2">d5d59225cfbf3cf664e9ce28bec296ba</data>
+      <data key="d3">0</data>
+      <data key="d4">49</data>
+      <data key="d5">b7702b90c7f24190b864e8c6e64612a5</data>
+    </node>
+    <node id="&quot;CONVOLUTIONAL NEURAL NETWORK (CNN)&quot;">
+      <data key="d0">"TECHNOLOGY"</data>
+      <data key="d1">"Convolutional Neural Network (CNN) is a type of artificial neural network that is used for handling diverse data types and tasks.")("entity"</data>
+      <data key="d2">31170fdcb9137905634fbe1f6f7312cd</data>
+      <data key="d3">0</data>
+      <data key="d4">50</data>
+      <data key="d5">de6fa24480894518ab3cbcb66f739266</data>
+    </node>
+    <edge source="&quot;GNNS&quot;" target="&quot;QUANTUM COMPUTING&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"GNNs will be enhanced by Quantum Computing, enabling them to solve more complex problems efficiently."</data>
+      <data key="d10">242307f545da2144b2e3affbd99017d2</data>
+      <data key="d11">6fae5ee1a831468aa585a1ea09095998</data>
+      <data key="d12">0</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;CLASSIFICATION DIFFICULTY&quot;" target="&quot;CONCEPT&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The complexity level of a feature determines the type of extraction method required for its extraction."</data>
+      <data key="d10">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d11">ef32c4b208d041cc856f6837915dc1b0</data>
+      <data key="d12">1</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;IBAN, E-MAIL ADDRESS, POSTAL CODES&quot;" target="&quot;FEATURES&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"These features are examples of simple features that can be extracted using rule-based methods."</data>
+      <data key="d10">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d11">07b2425216bd4f0aa4e079827cb48ef5</data>
+      <data key="d12">2</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;RULE-BASED (E.G., REGULAR EXPRESSIONS)&quot;" target="&quot;EXTRACTION METHODS&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"Simple features can be extracted using rule-based methods such as regular expressions."</data>
+      <data key="d10">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d11">2670deebfa3f4d69bb82c28ab250a209</data>
+      <data key="d12">3</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;NAMED ENTITIES (E.G., ORGANIZATION, PERSON NAME, PLACE)&quot;" target="&quot;FEATURES&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"These features are examples of dynamic features that require trained extraction models for their extraction."</data>
+      <data key="d10">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d11">404309e89a5241d6bff42c05a45df206</data>
+      <data key="d12">4</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;TRAINED EXTRACTION MODELS (E.G., NAMED ENTITY RECOGNITION (NER))&quot;" target="&quot;EXTRACTION METHODS&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"Dynamic and complex features require trained extraction models for their extraction."</data>
+      <data key="d10">6432a1a2eeff7c0f772b6fd06da0131a</data>
+      <data key="d11">b785a9025069417f94950ad231bb1441</data>
+      <data key="d12">5</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;DGA DATASET&quot;" target="&quot;BERT-FT&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The DGA dataset was used for the task performed by BERT-FT."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">3b6cd96a27304614850709aba1c9598b</data>
+      <data key="d12">6</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;DGA DATASET&quot;" target="&quot;ROBERTA-FT&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The DGA dataset was used for the task performed by Roberta-FT."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">d54956b79dd147f894b67a8b97dcbef0</data>
+      <data key="d12">7</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;DGA DATASET&quot;" target="&quot;LLAMA3-FT&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The DGA dataset was used for the task performed by LLAMA3-FT."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">958beecdb5bb4060948415ffd75d2b03</data>
+      <data key="d12">8</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;DGA DATASET&quot;" target="&quot;ZEPHYR-FT&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The DGA dataset was used for the task performed by Zephyr-FT."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">b999ed77e19e4f85b7f1ae79af5c002a</data>
+      <data key="d12">9</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;BERT-FT&quot;" target="&quot;NYMAIM&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"BERT-FT was trained to classify Nymaim malware."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">48c0c4d72da74ff5bb926fa0c856d1a7</data>
+      <data key="d12">10</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;BERT-FT&quot;" target="&quot;ACCURACY&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The accuracy of BERT-FT was 0.95."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">4f3c97517f794ebfb49c4c6315f9cf23</data>
+      <data key="d12">11</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;ROBERTA-FT&quot;" target="&quot;KRAKEN&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"Roberta-FT was trained to classify Kraken malware."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">1745a2485a9443bab76587ad650e9be0</data>
+      <data key="d12">12</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;ROBERTA-FT&quot;" target="&quot;ACCURACY&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The accuracy of Roberta-FT was 0.96."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">32e6ccab20d94029811127dbbe424c64</data>
+      <data key="d12">13</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;LLAMA3-FT&quot;" target="&quot;DYRE&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"LLAMA3-FT was trained to classify Dyre malware."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">94a964c6992945ebb3833dfdfdc8d655</data>
+      <data key="d12">14</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;LLAMA3-FT&quot;" target="&quot;ACCURACY&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The accuracy of LLAMA3-FT was 0.973."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">1eb829d0ace042089f0746f78729696c</data>
+      <data key="d12">15</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;ZEPHYR-FT&quot;" target="&quot;VIRUT&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"Zephyr-FT was trained to classify Virut malware."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">015e7b58d1a14b44beab3bbc9f912c18</data>
+      <data key="d12">16</data>
+      <data key="d13">0</data>
+    </edge>
+    <edge source="&quot;ZEPHYR-FT&quot;" target="&quot;ACCURACY&quot;">
+      <data key="d8">1.0</data>
+      <data key="d9">"The accuracy of Zephyr-FT was 0.970."</data>
+      <data key="d10">aa56d57d1a67661f549f17c258dd2197</data>
+      <data key="d11">26f88ab3e2e04c33a459ad6270ade565</data>
+      <data key="d12">17</data>
+      <data key="d13">0</data>
+    </edge>
+  </graph>
+</graphml>

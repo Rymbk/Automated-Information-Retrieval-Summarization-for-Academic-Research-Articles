@@ -1,0 +1,14 @@
+"A Divide-and-Conquer Approach to the Summarization of Long Documents"
+This study presents a method that decomposes long documents into smaller summarization problems, effectively handling documents with more than 500 sentences.
+
+"SciBERTSUM: Extractive Summarization for Scientific Documents"
+This framework is designed for summarizing long scientific documents, extending BERTSUM to handle documents with more than 500 sentences.
+
+"Optimal Chunk-Size for Large Document Summarization"
+This blog post discusses optimal chunking strategies for large document summarization, proposing chunk sizes that balance information retention and computational efficiency.
+
+"Summarizing Long Documents" - OpenAI Cookbook
+This guide demonstrates how to summarize large documents by breaking them into manageable chunks, highlighting the importance of chunk size in the summarization process.
+
+"Summarize Large Documents with Llama 2 and LSA"
+This article explores summarization techniques for large documents, including chunking strategies to handle extensive texts effectively.

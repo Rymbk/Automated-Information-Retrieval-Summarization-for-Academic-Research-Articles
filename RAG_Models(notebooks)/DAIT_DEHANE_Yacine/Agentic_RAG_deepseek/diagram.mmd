@@ -1,0 +1,58 @@
+```mermaid
+%%{ init : { "theme": "neo" } }%%
+flowchart LR
+    A[User Uploads PDF] --> B[Extract Text (PyMuPDF)]
+    B --> C[Chunk Text (RecursiveCharacterTextSplitter)]
+    C --> D[Compute Embeddings (SentenceTransformer)]
+    D --> E[Store Chunks & Embeddings (ChromaDB)]
+    D --> F[Aggregate PDF Embeddings (Mean)]
+    F --> G[Retrieve Top-5 Similar Chunks (ChromaDB)]
+    C --> H[Extract Abstract as Reference Summary]
+
+    I[User Query] --> J[Process Query]
+
+    C --> K[Baseline Model]
+    K --> L[Select First 5 Chunks]
+    L --> M[Create Prompt for Summarization]
+    M --> N[Run LLM Inference]
+    N --> O[Baseline Summary]
+
+    I --> P[Classical RAG]
+    P --> Q[Compute Query Embedding]
+    Q --> R[Retrieve Top-5 Relevant Chunks (ChromaDB)]
+    R --> S[Create Prompt for Retrieved Chunks]
+    S --> T[Run LLM Inference]
+    T --> U[Classical RAG Summary]
+
+    J --> V[Agentic RAG]
+    C --> W[Select First 5 Chunks (Context)]
+    G --> X[Use Top-5 Similar Chunks]
+    W --> Y[Compose Prompt with Context + Similar Chunks]
+    X --> Y
+    Y --> Z[ToolCallingAgent + Reasoner LLM]
+    Z --> AA[Agentic RAG Summary]
+
+    H --> AB[Reference Summary]
+    O --> AC[Evaluate Baseline Summary]
+    U --> AD[Evaluate Classical RAG Summary]
+    AA --> AE[Evaluate Agentic RAG Summary]
+    AB --> AC
+    AB --> AD
+    AB --> AE
+
+    AC --> AF[Compute Metrics (ROUGE, BLEU, BERTScore)]
+    AD --> AF
+    AE --> AF
+
+    AF --> AG[Generate Metric Plots (Matplotlib)]
+    AG --> AH[Save Plots to Results Folder]
+
+    A --> AI[Gradio Interface]
+    I --> AI
+    O --> AJ[Show Baseline Summary]
+    U --> AK[Show Classical RAG Summary]
+    AA --> AL[Show Agentic RAG Summary]
+    AI --> AJ
+    AI --> AK
+    AI --> AL
+```

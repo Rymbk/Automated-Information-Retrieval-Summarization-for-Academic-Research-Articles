@@ -1,0 +1,1878 @@
+Federated Fine-Tuning of LLMs on the Very Edge:
+The Good, the Bad, the Ugly
+Herbert Woisetschlager
+herbert.woisetschlaeger@tum.de
+Technical University of Munich
+Munich, Germany
+Alexander Erben
+alex.erben@tum.de
+Technical University of Munich
+Munich, Germany
+Shiqiang Wang
+wangshiq@us.ibm.com
+IBM T.J. Watson Research Center
+Yorktown Heights, United States
+Ruben Mayer
+ruben.mayer@uni-bayreuth.de
+University of Bayreuth
+Bayreuth, Germany
+Hans-Arno Jacobsen
+jacobsen@eecg.toronto.edu
+University of Toronto
+Toronto, Canada
+ABSTRACT
+With the emergence of AI regulations, such as the EU AI Act, re-
+quirements for simple data lineage, enforcement of low data bias,
+and energy efficiency have become a priority for everyone offer-
+ing AI services. Being pre-trained on versatile and a vast amount
+of data, large language models and foundation models (FMs) of-
+fer a good basis for building high-quality deep learning pipelines.
+Fine-tuning can further improve model performance on a specific
+downstream task, which requires orders of magnitude less data
+than pre-training. Often, access to high-quality and low-bias data
+for model fine-tuning is limited due to technical or regulatory
+requirements. Federated learning (FL), as a distributed and privacy-
+preserving technique, offers a well-suited approach to significantly
+expanding data access for model fine-tuning. Yet, this data is often
+located on the network edge, where energy, computational, and
+communication resources are significantly more limited than in
+data centers.
+In our paper, we conduct an end-to-end evaluation for fine-tuning
+the FLAN-T5 FM family on the network edge. We study energy effi-
+ciency potentials throughout FL systems - on clients, in communi-
+cation, and on the server. Our analysis introduces energy efficiency
+as a real-time metric to assess the computational efficiency of an FL
+system. We show the stark need for further improvements in com-
+munication efficiency when working with FMs and demonstrate
+the importance of adaptive FL optimizers for FM training.
+ACM Reference Format:
+Herbert Woisetschlager, Alexander Erben, Shiqiang Wang, Ruben Mayer,
+and Hans-Arno Jacobsen. 2024. Federated Fine-Tuning of LLMs on the Very
+Edge: The Good, the Bad, the Ugly. In Workshop on Data Management for
+End-to-End Machine Learning (DEEM 24), June 9, 2024, Santiago, AA, Chile.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+ACM ISBN 979-8-4007-0611-0/24/06
+Year
+FLOPS / Memory Bandwidth Ratio
+V100
+V100S
+A100 40G
+A100 80G
+H100
+H100 NVL
+RPi4
+Nano
+Orin Nano
+AGX Orin
+RPi4
+Nano
+Orin Nano
+V100
+V100S
+A100 40G
+AGX Orin
+A100 80G
+H100
+H100 NVL
+Device
+Memory (in GB)
+Type
+Data center
+Edge / embedded
+Figure 1: Development of computational power and resource
+availability of DL accelerators 2017 - 2023 for data centers
+and embedded systems. Key: RPi4 = Raspberry Pi 4, Nano =
+NVIDIA Jetson Nano, Orin Nano = NVIDIA Jetson Orin Nano,
+AGX Orin = NVIDIA Jetson AGX Orin 64 GB.
+INTRODUCTION
+Large Language Models (LLMs) and Foundation Models (FMs) are
+omnipresent in academia and practice and fuel new innovations [6].
+These models have grown significantly with regard to parameter
+size, as more parameters improve the performance to a certain de-
+gree [18]. In line with the growing computational need for these
+models, deep learning (DL) hardware accelerators have become
+increasingly more capable. Recent developments indicate a gener-
+ational leap in computational power for data center applications,
+with the NVIDIA H100 NVL delivering 7.8 TB/s memory bandwidth
+compared to the previous state-of-the-art A100 80GB GPU that only
+has 2 TB/s (Figure 1). Due to memory-bandwidth bottlenecked oper-
+ations taking up to 40% of the training time [22], this improvement
+may lead to much faster training times for both small and large
+models. At the same time, computational capabilities on embedded
+devices for mobile edge computing are significantly growing, with
+the NVIDIA Jetson AGX Orin 64GB being the first-of-a-kind DL-
+accelerated embedded device that provides capabilities for training
+FMs [9]. This has never been possible before and enables us to
+build FL workloads with large transformer models, benefit from
+scattered data, and bring generative AI closer to users, all the while
+improving data privacy.
+As this type of device is oftentimes scattered across geographies
+and entities, federated DL (FL) imposes itself as a well-suited tech-
+nique for fine-tuning FMs in a distributed and private fashion. To
+arXiv:2310.03150v2  [cs.LG]  2 May 2024
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+Woisetschlager et al.
+our knowledge, the largest models discussed in FL to this point
+entail FedBert and GPT2 [39, 48]. Both models were trained with FL
+methods on multi-GPU data center nodes. Only a few studies exist
+on field deployments [4]. As can be seen in Figure 1, the computing
+resources of state-of-the-art embedded hardware like the NVIDIA
+Jetson AGX Orin are orders of magnitude less than on a modern
+data center GPU like the H100. However, if we want to gain access
+to a broader data basis, we need to foster FL on the edge and bring
+FMs to embedded devices.
+At the same time, new regulations like the European Union AI Act
+impose new limitations and requirements for FL [43] that need to
+be met such that applications become practical. This entails the
+need to prioritize energy efficiency. For FL, this is an underexplored
+area as most existing works either perform microbenchmarks for
+FL clients [27, 5] or focus on communication cost reduction [13].
+The combination of resource limitations and increasing regulatory
+requirements presents us with a set of challenges:
+(1) Comparably low memory bandwidth on embedded de-
+vices limits the compute potential of FL applications
+on the edge. We currently see a generation leap in data
+center DL accelerators regarding memory bandwidth, which
+has increased significantly (up to 7.8 TB/s). Even though
+the memory size on embedded devices has increased, the
+memory bandwidth remains comparatively low (up to 0.2
+TB/s). This affects key memory-bandwidth bottlenecked op-
+erations for the training process, which could lead to severe
+training time penalties.
+(2) Energy efficiency has become a priority with the intro-
+duction of the EU AI Act. The new regulation requires ser-
+vice providers that offer FL applications to focus on energy-
+efficient operations. To this point, energy efficiency can be
+measured by means of the Model-FLOP utilization [8], but
+it requires knowledge of what hardware is being used and
+how to optimally configure it. In FL systems, this can be
+impractical as we often do not know client details, and in
+many cases, clients are likely to participate only once in the
+training process [32].
+(3) FMs are large in size and are harder to train or fine-tune
+than small models. The prevailing benefit of FMs is their
+ability to cater to many different tasks [6]. However, their
+performance on specific downstream tasks can be improved
+with fine-tuning [20]. Yet, the gradients during foundation
+model training or fine-tuning are at much higher risk of
+exploding or vanishing than in smaller tasks, as they are
+frequently discussed in FL [27, 17, 7].
+(4) Communication on the edge is significantly more ex-
+pensive than in data centers. While network bandwidth
+in data centers is available at 100 Gbit [2], mobile or remote
+communication over wide area networks is still a difficult
+challenge to achieve, especially when handling 100M+ pa-
+rameter DL models. For distributed learning applications
+where high-bandwidth communication is available, we can
+use techniques such as ZeRo-offloading [37] and FSDP [50]
+that utilize a high-bandwidth interconnect for all-reduce
+communication between nodes to not materialize the full
+model, optimizer, and gradient state due to limited mem-
+ory sizes. In FL, this is typically infeasible due to a limited
+network interconnect.
+Based on the open challenges to creating efficient edge computing
+systems capable of training FMs, we formulate our research ques-
+tion: How can we efficiently realize FM training and fine-tuning
+at the network edge? Which levers can have the largest impact on
+improving FL system efficiency?
+By exploring this research question, we make four major contri-
+butions to bridge the gap between federated foundation model
+training and energy-aware FL:
+(1) We systematically study the computational limitations
+of state-of-the-art embedded hardware for DL. Nowa-
+days, most papers in the FL space use data center hardware
+for their experiments [17, 7], while large amounts of data are
+scattered on the edge and must not be neglected as a field
+of application. We, therefore, conduct an in-depth micro-
+benchmark of various transformer models on the latest em-
+bedded and datacenter DL accelerators to identify computa-
+tional bottlenecks.
+(2) We outline the limitations of theoretical metrics such
+as the Model-FLOP Utilization for FL applications. As
+micro-benchmarks require extensive experimentation, prac-
+titioners often use metrics, such as the Model-FLOP Utiliza-
+tion (MFU), based on theoretical hardware performance lim-
+its to assess the computational efficiency of algorithms [11].
+Calculating the MFU requires knowledge of hardware specifi-
+cations on FL clients, which could be infeasible due to privacy
+considerations. As such, we identify energy efficiency as a
+readily available alternative to the MFU and outline that the
+computational limits of embedded AI accelerators appear
+significantly earlier than the MFU suggests.
+(3) We benchmark four state-of-the-art FL optimizers for
+FM fine-tuning. A key to energy-efficient use of FL is the
+right optimizer choice. We systematically benchmark four
+state-of-the-art FL optimizers to quantify the energy savings
+with the right optimizer choice. We find adaptive optimiza-
+tion techniques to converge up to 8x faster than FedAvg
+with momentum, one of the most widely used FL optimizers
+[29].
+(4) We quantify the total cost of communication in FL ap-
+plications with state-of-the-art FMs. Our study identifies
+wide-area communication as the primary driver for energy
+consumption in FL systems, up to 4 orders of magnitude
+higher than the energy consumed by computing on clients.
+This paper is structured as follows. Section 2 will outline relevant
+background. In Section 3, we present our methodology, and in Sec-
+tion 4, we present our benchmark design, including datasets, DL
+models, and FL strategies. Section 5 contains experimental eval-
+uations of our benchmark. In Section 6, we present related work.
+In Section 7, we discuss our results. In Section 8, we conclude our
+work.
+Federated Fine-Tuning of LLMs on the Very Edge: The Good, the Bad, the Ugly
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+BACKGROUND
+Performance Objectives in Data Center
+Environments
+One of the most important issues when training in a data center
+is to maximize throughput by trying to use the hardware to its
+limit without being blocked by communication. Communication
+concerns both local communication, i.e., memory movement, and
+communication between GPUs and nodes, typically with a high
+bandwidth interconnect such as NVLink (7.8 TB/s) and Ethernet
+(100 Gbit) [2].
+Measuring the effectiveness of each GPU in training is possible via
+Model FLOP Utilization (MFU) [8], which is the ratio of throughput
+achieved compared to the theoretical throughput of a model and a
+set of hardware. Common values for the MFU are between 5 - 20%
+(Figure 4a) because DL models are not defined as a single matrix
+multiplication that can be perfectly parallelized between tensor
+cores but as many operations with memory bandwidth bottlenecks
+such as softmax, residual additions, and activations [22]. These
+operations result in a FLOP usage significantly lower than the
+theoretical hardware capability, and each model architecture has
+its own set of operations that slow down throughput. However, the
+MFU can be used as a benchmark for how well a model is suited
+to work on a particular piece of hardware, as it fits the trade-offs
+between memory bandwidth, memory capacity, and FLOP. This
+way, we can compare the MFU for the same model on different
+hardware and contrast their results.
+Performance Objectives on the Edge
+In edge computing systems that involve embedded devices, per-
+formance considerations differ from those in data center environ-
+ments as use cases typically vary [41]. Yet, to run FL workloads
+on embedded devices on the edge, we need to unite performance
+characteristics from data centers and edge computing.
+Running FL workloads on the edge is all about minimizing the
+time we use a client's hardware and maximizing the throughput.
+Yet, the hardware is often located in remote areas with limited
+access to power or even on mobile devices with very restrictive
+battery management [34]. Also, in remote and mobile environments,
+network bandwidth utilization and total network traffic are critical.
+Both have a significant impact on communication latency, i.e., how
+fast we can move model weights between clients and a server.
+For foundation models, both can become a hurdle, as this kind
+of model tends to grow beyond several hundreds of millions of
+parameters in size or, in other words, beyond 1 GB in parameters
+to transfer over the network. Putting that into perspective with
+the average available wireless network bandwidth of 50 Mbit/s
+on mobile devices [40] yields communication times substantially
+longer than the actual computation time on clients [5].
+Regulatory Requirements with Regard to
+Energy Efficiency
+As we see regulatory frameworks on Artificial Intelligence emerge
+and be passed as laws, the first legislation to come into effect by
+2024 is the EU AI Act [10]. Other countries have declared the EU AI
+Act as a lighthouse framework; they aim to align their individual
+frameworks with it [19]. A priority in the EU AI Act is energy
+efficiency [43]. The objective is to promote sustainable computing
+practices by holding service providers liable for monitoring energy
+consumption and subsequently fostering the energy efficiency of
+an FL system. As such, it is vital to understand where and how
+efficiency potentials can be lifted such that the practical applicability
+of FL is improved.
+Algorithm 1: Federated Adam with decoupled weight de-
+cay (FedAdamW)
+Given: set of clients KN+, server rounds sN+,
+1 = 0.9, 2 = 0.999, = 10-6, R
+Initialize: server round t-0, initial parameters xt=0 R,
+first momentum vector mt=0 -0, second
+momentum vector vt=0 -0, server learning rate
+sR, client learning rate cR
+for tto sdo
+// server-side
+Sample subset kK
+i= xt
+Distribute model weights to clients
+// client-side (is identical with FedAvg)
+for ikin parallel do
+i-Fi(xt
+i) // compute local gradient
+xt+1
+= xt
+i-c* gt
+i// update client model
+Send model update xt+1
+to server
+// server-side optimization
+xt+1 -
+I|k|
+xt+1
+// FedAvg
+gt-xt-xt+1 // pseudo gradient
+mt+1 -1 * mt+ (1 -1) * gt// momentum
+vt+1 -2 * vt+ (1 -2) * g2
+t// velocity
+// FedAdamW
+xt+1 -xt-s* xt// decoupled weight decay
+^mt+1 -mt+1
+1 // regularized momentum
+^vt+1 -vt+1
+2 // regularized velocity
+xt+1 -xt+1 -s* ^mt+1
+^vt+1+
+t-t+ 1 // update FL round
+Result: optimized parameters xt
+METHODOLOGY
+Generally, when transferring LLM fine-tuning to the edge, we also
+transfer the challenges we currently have in data center environ-
+ments into systems that suffer from more severe resource limita-
+tions. While energy efficiency is a specific challenge to edge com-
+puting systems, network bandwidth and computational efficiency
+are frequently discussed topics for DL applications in data centers.
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+Woisetschlager et al.
+With our hardware-centric study, we aim to provide a comprehen-
+sive perspective on energy efficiency levers in FL systems on the
+edge to foster sustainable computing and, subsequently, legal com-
+pliance with the EU AI Act. To do so, we organize our methodology
+along the following four pillars to cover the end-to-end training
+pipeline.
+Computational Efficiency
+By studying the behavior of state-of-the-art FL clients when it
+comes to scaling on-device training with varying model sizes and
+minibatch sizes, we aim to understand how the training steps (for-
+ward, loss calculation, opt.step(), and backward) differ between
+data center resources and clients deployed on the network edge.
+Maximization of resource utilization is the superior objective for
+DL and FL applications in data center environments, as this is usu-
+ally equivalent to a cost-optimal solution [14]. In the HPC domain,
+MFU is used to calculate the hardware resource utilization based
+on the number of theoretical hardware FLOP/s. By varying the
+minibatch size, the MFU can also be used to identify computational
+bottlenecks, i.e., whether we are computationally bound or memory
+bandwidth limited. In our experiments, the theoretical capacity of
+the NVIDIA A100 is 312 TFLOP (at FP32), while the Jetson AGX
+Orin 64 GB provides 42.5 TFLOP or 13% of the A100. As such, the
+MFU is well suited for in-depth analysis but requires full knowledge
+of client hardware specifications and the availability of performance
+metrics. However, in FL systems, clients are often heterogeneous
+regarding their hardware and considered ephemeral, i.e., they are
+likely to participate in training only once [32].
+Energy Efficiency
+With the imminent legal requirements to focus on energy efficiency,
+practical FL system design must include energy monitoring, regard-
+less of whether FL clients are deployed in a data center or on the
+network edge. Yet, in edge computing, energy efficiency has been
+a priority for a long time [38, 47, 51]. A major benefit of clients
+on the network edge, such as NVIDIA Jetson AGX Orin, is their
+hardware design since they are often created as a system-on-a-chip
+(SoC) and contain hardware-based power measurement units for
+each component (e.g., CPU, GPU). In contrast to MFU, which re-
+quires detailed hardware knowledge, energy metrics are likely to be
+readily available and easy to measure across all clients. We define
+energy efficiency as the tokens per second (TPS) throughput over
+the average power draw (W) for a workload,
+e= TPS
+Communication Efficiency
+Communication is equally important for federated LLM fine-tuning
+as computational efficiency. Typically, full models or partial model
+weights are communicated between client and server [33]. Yet,
+communication on data center settings is built on top of high-
+performance networking infrastructure that enables bandwidths
+of 100 Gbit and more [2]. On the edge, we often find significantly
+slower network links with 1 Gbit and below. For instance, the
+global average for communication over 4G LTE wireless is 40 Mbit
+download and 15 Mbit upload [40].
+We need a reliable metric to quantify communication efficiency
+that, at the same time, tells us whether it is useful to further scale
+a FL workload over more clients or not. Borrowing from the HPC
+domain, Granularity (G) measures the ratio between the time it
+takes to compute a DL task (Tcomp) and to communicate the model
+gradients or weights (Tcomm) [21]. It is defined as
+G= Tcomp
+Tcomm
+In our FL scenario, the computation time is the maximum fine-
+tuning time on a client in each round, and the communication time
+is the time spent sending the model state, waiting, and receiving the
+aggregated model state from the server. In general, G1 indicates
+that adding one more client to a system has a positive effect on the
+total processing speed (higher throughput). G1 is an indicator
+for communication times significantly outweighing computation
+times and, therefore, no positive effect on system throughput. As
+such, we use Gas the evaluation metric to evaluate the practical
+utility of federating an FL application.
+In addition to scalability considerations, we evaluate communica-
+tion costs when deploying FL applications to the network edge. To
+do so, we consider two scenarios. First, we look at a mobile edge
+computing scenario where clients are connected via an LTE wire-
+less connection [1], which exhibits download and upload speeds of
+40 and 10 Mbit, respectively [40]. Second, we consider a scenario
+where FL clients are operating at the network edge with a wired 1
+Gbit connection that is often found in factory settings [26]. We use
+the per-bit communication model to estimate the total communica-
+tion cost of our FL pipelines [43, 46, 23]. It is important to note that
+once wireless communication is involved, the energy consumption
+for communication increases by two orders of magnitude [23]. A
+detailed explanation and the exact parameterization of the per-bit
+communication model are available in Section A.
+Model Performance
+We use four widely used federated optimizers: (I) Federated Averag-
+ing (FedAvg) [33], (II) FedAvg with Momentum (FedAvgM) [29], (III)
+Federated Adam (FedAdam) [36], and (IV) we introduce FedAdam
+with decoupled weight decay (FedAdamW). The objective of each
+optimizer is to minimize the loss of a given neural network, typi-
+cally done by stochastic gradient descent (SGD). All four optimizers
+share SGD as the optimization basis.
+FedAvg is used to control the communication efficiency of an FL
+application as it allows training over multiple minibatches on a
+client before communicating a model update. With federated SGD,
+we would have to communicate after each minibatch [33]. However,
+as soon as we encounter high change rates in gradients, as is often
+the case when working with foundation models, we require adap-
+tive control over the model learning rate [25]. FedAvgM introduces
+(first-order) momentum regularization to reduce the impact of early
+gradient and stabilize training. Yet, often, this is not enough, as
+reducing the momentum too much slows down model convergence
+towards the end of the training; subsequently increasing training
+costs [25]. For this, Reddi et al. [36] introduced FedAdam among
+other federated optimizers. Additionally to momentum, FedAdam
+uses velocity (second-order momentum) to further regularize gradi-
+ents. Even though FedAdam may provide faster model convergence,
+Federated Fine-Tuning of LLMs on the Very Edge: The Good, the Bad, the Ugly
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+Step time (in s)
+Small
+Base
+Large
+Step
+Batch Load
+Forward
+Loss Calc.
+Opt. Step
+Backward
+Figure 2: DL training step times across FLAN-T5 transformer models with varying minibatch sizes on the Samsum dataset
+running on the NVIDIA A100 and Jetson AGX Orin platform. Detailed metrics are available in Appendix Section C.
+similar to its centralized counterpart Adam, it is challenged by a
+worse generalization over new data than SGD.
+To tackle this challenge, we implement federated Adam with decou-
+pled weight decay (FedAdamW) based on Loshchilov and Hutter
+[30] (Algorithm 1). A theoretical analysis for decoupling weight
+decay in adaptive optimization algorithms is provided by Jin et al.
+[24]. The objective is to use weight decay as an additional optimiza-
+tion technique to penalize large or vanishing gradients. To evaluate
+the effectiveness of each optimization technique, we study the vali-
+dation loss and the Rouge-1 score. In natural language processing
+research, the Rouge-1 score evaluates unigram overlaps between a
+model-generated output and a reference text. Generally, a Rouge-1
+score of 50 is considered a strong result. It is a derivative of the
+F1-Score known from classification tasks (as often encountered in
+computer vision research) [28].
+EXPERIMENTAL SETUP
+Our hardware-centric study for FL on the edge focuses on evaluat-
+ing state-of-the-art DL workloads on embedded devices. As such,
+we focus on a state-of-the-art FM family.
+Evaluation hardware. In our hardware-centered study, we fo-
+cus on state-of-the-art deep learning accelerators for embedded
+and data center computing. We employ a cloud VM with a single
+NVIDIA A100 80 GB (SXM4) as a data center node (A100) to per-
+form our local baseline experiments. Further, we use a dedicated
+cluster consisting of ten NVIDIA Jetson AGX Orin 64 GB nodes
+(Orin) as the only state-of-the-art embedded computing platform
+that provides enough computational resources for training FMs.
+The Orins are connected with a 1 Gbit synchronous network link
+and are monitored with 2 Hz for their power metrics (Figure 3).
+For our FL experiments, we use a GPU-accelerated VM co-located
+with the Orins to handle the model aggregation and testing of the
+global model. For all of our experiments, we do not limit hardware
+capabilities.
+DL models. For our experiments, we adopt the FLAN-T5 trans-
+former model family [9] for conditional text generation. Even
+though the FLAN-T5 models' parameter sizes are small compared
+to other state-of-the-art FMs, they often provide the best-in-class
+Figure 3: Our NVIDIA Jetson AGX Orin 64GB Testbed. 10
+devices with freely configurable network interconnect up to
+10 Gbit. Active external cooling is a must at the given energy
+density of 10 * 60Wmax. power draw.
+performance [15]. We evaluate the computational training perfor-
+mance of the FLAN-T5-Small model with 80M parameters or 308 MB
+in size, the FLAN-T5-Base model with 250M parameters (990 MB),
+the FLAN-T5-Large model with 783M parameters (3.1 GB), and the
+FLAN-T5-XL model with 3B parameters (11.4 GB). For all models,
+we use their corresponding pre-trained tokenizers. For each model,
+we apply parameter-efficient fine-tuning (PEFT) in the form of Low-
+Rank Adaptation (LoRA), which is used to reduce the number of
+trainable parameters to < 1% of all model parameters [20]. We pa-
+rameterize LoRA for the FLAN-T5 model family as follows: r= 16,
+l= 32, dropout = 0.05. We do not fine-tune the LoRA bias.
+Dataset. All the FLAN-T5 models are fine-tuned on the Samsum
+dataset with the objective of summarizing texts with a maximum
+token length of 512 elements [16]. The maximum model output
+length is 95 tokens, which can be translated into the summaries
+of the respective inputs. For our FL experiments, we choose to
+sample to the number of samples per client subset from a Dirichlet
+distribution as it is frequently used in related work [27, 17, 7].
+FL setup. We use a Dirichlet d= 1 to randomly split the Samsum
+dataset into 100 subsets that we distribute on the Orin compute
+cluster. We train all FLAN-T5 models until they overfit the Samsum
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+Woisetschlager et al.
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+10.0
+12.5
+15.0
+17.5
+20.0
+MFU (in %)
+Small
+Base
+Large
+(a) MFU in %
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+A100
+Orin
+ee = T P S
+Small
+Base
+Large
+Type
+Data center
+Edge / embedded
+(b) ein TPS
+Small
+Base
+Large
+FLAN-T5 Model
+Correlation between MFU & ee
+88.42
+89.31
+90.18
+(c) Pearson Correlation
+Figure 4: We study the model FLOP utilization (MFU) and the energy efficiency (e) of the FLAN-T5 transformer model family
+and find a strong correlation between the MFU and e, which is useful to evaluate root causes for poor training speeds in
+real-time.
+dataset or have seen 60, 000 samples. In each FL round, we let 10
+physical clients participate, i.e., we have a participation rate of 10%.
+For each round, we perform 2 local training steps on each client
+before communicating with the server. The client-side optimizer
+is SGD with a learning rate of 1.0 and no momentum in all experi-
+ments. On the server side, we employ FedAvg, FedAvgM, FedAdam,
+and FedAdamW. The exact hyperparameters for the server-side
+optimizer can be drawn from Table 3 in Section B.
+RESULTS
+Our results are organized so that we first understand the computa-
+tional limitations of what foundation model sizes can be deployed at
+the edge. We analyze to what point scaling primitives, as we know
+them from data center environments, hold true at the network edge.
+We then study computational bottlenecks and show the limitations
+of theoretical analysis. Next, we investigate the energy efficiency of
+training with varying minibatch sizes and point out how energy ef-
+ficiency can be used to estimate the most energy-efficient on-device
+training configuration. We round off our systems analysis with a
+communication cost estimation. Lastly, we study the importance of
+decoupled weight decay when training state-of-the-art foundation
+models and quantify the cost savings.
+Computational & Energy Efficiency
+When designing FL systems, we have to anticipate what type of
+clients will be participating and how we can optimally use their
+training performance to receive a trained model in a timely manner.
+This is especially relevant for edge computing environments where
+client hardware is significantly distinct from data center hardware
+typically used to pre-train and prepare foundation models before
+using them in a federated setting [49, 3].
+Increasing the minibatch size on embedded devices does not
+scale well. To understand local training performance in detail,
+we measure the timing using a microbenchmark (Figure 2). We
+find linearly growing opt.step() times for all models as we scale
+the minibatch size on the Orins, while the step times on the A100
+platform scale logarithmically with increasing batch size (Figure 2).
+The same is true for the backward step.
+The Orin platform is severely bottlenecked by memory band-
+width compared to the A100. To develop an understanding of
+what needs to be done to move from linear to logarithmically grow-
+ing training times, we look at the MFU (Figure 4a). The MFU can
+explain whether training exhibits a computational or memory bot-
+tleneck on an FL client. Throughout all experiments, we find a
+stagnating MFU for the Orins as we scale the minibatch size, while
+on the A100 the MFU steadily grows. As such, on the embedded plat-
+form, we reach the maximum theoretical computational efficiency
+with a minibatch size of 64 for FLAN-T5 Small, 32 for FLAN-T5 Base,
+and 8 for FLAN-T5 Large. Overall, a stagnating MFU as minibatch
+sizes increase means that increased parallel computation potential
+does not result in additional used FLOPs. This can only happen if we
+encounter a memory bandwidth bottleneck. We see from Figure 2
+that the Orin opt.step() function updating model weights and
+biases is taking up a significant amount of time in comparison to
+A100, which suggests that its performance is highly dependent on
+memory bandwidth.
+With our proposed energy efficiency metrice, we enable real-
+time monitoring of computational efficiency on the client-
+level. We study eand MFU of the NVIDIA A100 and Jetson AGX
+Orin across the FLAN-T5 transformer family. For the FLAN-T5-
+Small model, as we scale the batch size, we notice an increasing
+euntil a minibatch size of 8 (Figure 4b). Afterwards, eremains
+constant, i.e., scaling the minibatch size further does not yield any
+performance benefits. The A100, for the same set of experiments,
+consistently scales with increasing minibatch size. The evaluation
+of the MFU on the same set of experiments as for eunveils an
+identical trend (Figure 4a). The correlation between the MFU and
+eoriginates from both metrics being tied to power draw via FLOPs
+and Tokens per Second (TPS), respectively.
+We reach the computational limits of state-of-the-art deep
+learning accelerators much earlier than theoretical analysis
+indicates. While the MFU suggests we should scale the minibatch
+size on the Orins up to 128 samples, we find that the actual memory
+bottlenecks appear at much smaller minibatch sizes already. When
+evaluating the energy efficiency during training, we found that
+we had already reached the highest efficiency on the Orins with a
+smaller minibatch size of 8 for all models compared to the A100. As
+such, we identified the practical computational limits of state-of-
+the-art embedded devices for DL.
+Federated Fine-Tuning of LLMs on the Very Edge: The Good, the Bad, the Ugly
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+Training Round
+1.66
+1.68
+1.70
+1.72
+1.74
+1.76
+Validation Loss
+Point of overfitting
+(round: 845)
+Optimizer
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FL Optimizer
+Rouge-1 Score
+42.20
+43.22
+43.82
+44.09
+(a) FLAN-T5 Small
+Training Round
+1.38
+1.40
+1.42
+1.44
+1.46
+Validation Loss
+Point of overfitting
+(round: 856)
+Point of overfitting
+(round: 847)
+Optimizer
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FL Optimizer
+Rouge-1 Score
+46.64
+46.75
+47.03
+47.02
+(b) FLAN-T5 Base
+Training Round
+1.22
+1.24
+1.26
+1.28
+Validation Loss
+Point of overfitting
+(round: 2985)
+Optimizer
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FL Optimizer
+Rouge-1 Score
+49.11
+49.32
+49.34
+49.76
+(c) FLAN-T5 Large
+Figure 5: We show the effectiveness of Federated AdamW by
+training the FLAN-T5 Model family in a federated setup with
+100 clients (10 clients per round). We report the validation
+loss (left) and the Rouge-1 score (right) as performance in-
+dicators. Note: The loss spikes for FLAN-T5 Large originate
+from an increased sensitivity of LoRA adapters with a large
+parameter count to non-IID data [3].
+Model Performance
+Equally important to the hardware performance side is evaluating
+state-of-the-art FL optimizers on the algorithmic side, as this af-
+fects the energy efficiency of the entire FL system as well. We find
+adaptive optimization to be vital for FMs in FL applications.
+Federating AdamW accelerates model convergence and saves
+cost and time compared to other widely-used FL optimiz-
+ers. We compare four commonly used FL optimizers to find out
+about their training efficiency and convergence speed with state-
+of-the-art foundation models (Figure 5). While the FLAN-T5 model
+family exhibits a slow convergence speed with FedAvg that is ap-
+proximately three orders of magnitude slower than FedAdam or
+FedAdamW, we find notable training progress with the adaptive op-
+timizers after 135, 150, and 340 rounds for FLAN-T5 Small, Base, and
+Table 1: Communication cost analysis when training the
+FLAN-T5 model family in an FL system with FedAdamW
+until the minimal loss is achieved. G1 suggests that a
+model is well-suited for FL at scale. kWh denotes the power
+consumption incurred during communication per FL round
+based on the per-bit communication model.
+FLAN-T5 Small
+FLAN-T5 Base
+FLAN-T5 Large
+(845 FL rounds)
+(856 FL rounds)
+(2985 FL rounds)
+Training
+Comm.
+Device
+Full Model
+A100
+0.01
+0.81
+0.00
+2.60
+8.22
+Orin
+0.03
+0.01
+1 Gbit
+A100
+14.90
+0.13
+4.64
+0.40
+1.47
+1.27
+Orin
+32.90
+10.23
+3.24
+PEFT
+A100
+1.70
+0.01
+0.65
+0.02
+0.25
+0.05
+Orin
+3.70
+1.44
+0.54
+1 Gbit
+A100
+1690.90
+< 0.01
+664.29
+< 0.01
+244.74
+0.01
+Orin
+3727.30
+1464.29
+539.47
+Large, respectively. Also, for FLAN-T5 Base and Large, the achiev-
+able loss with FedAdamW is lower than with FedAdam before the
+model starts to overfit the Samsum dataset. As such, applying the
+state of the art for optimization in an FL application yields not only
+time and cost benefits but also improves model quality at the same
+time.
+Communication Efficiency
+As we have shown, the computational optimization potential on
+state-of-the-art embedded hardware is limited. As such, it is key to
+consider the cost of communication during FL training and study
+how well a model can scale under limited communication.
+PEFT significantly improves the scalability of FL systems,
+regardless of whether bandwidth-limited wireless commu-
+nication is involved. During our experiments, we find PEFT im-
+proves Gby up to 110x as compared to full model training (Table 1).
+This originates from a compounding effect that is beneficial in
+FL setups. Not only does PEFT reduce the demand for computa-
+tional resources (esp. GPU memory), but by reducing the number
+of trainable parameters to < 1% of the total parameter count, it
+also reduces communication by > 99%. Due to the relatively higher
+timeshare of computation compared to communication, this signifi-
+cantly increases G, indicating better scalability of an FL application
+regardless of the communication technology. At the same time and
+as expected, full model fine-tuning is only viable in environments
+that benefit from a high network bandwidth, often absent in FL.
+RELATED WORK
+We divide our related work section into two major streams of work.
+One is foundation model training with FL, and the other is energy-
+aware or energy-efficient FL.
+Foundation model training with FL. With FATE-LLM, Fan et al.
+[12] present an extension of the FATE FL framework to train foun-
+dation models, specifically large language models, in a federated
+setting. They introduce a broad range of foundation models and
+parameter-efficient training techniques with a brief evaluation of
+the communication benefits of parameter-efficient fine-tuning tech-
+niques by means of trainable parameters. Similarly, FedML [17] sup-
+ports the training of foundation models in FL systems by providing
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+Woisetschlager et al.
+a wide range of models ready to use. At the same time, we see a wide
+variety of parameter-efficient FL methods emerge that tackle data
+heterogeneity and address resource limitations. SLoRA [3] presents
+a method to tackle the challenge of non-IID data by calibrating the
+LoRA parameterization in a warm-up phase over multiple rounds,
+achieving stronger model performance than LoRA without cali-
+bration. FwdLLM [44] enables backpropagation-free fine-tuning of
+foundation models with a special focus on reducing the memory
+footprint, enabling the training of models on resource-constrained
+clients.
+Energy-aware and energy-efficient FL. Energy-aware FL system
+design has been discussed extensively, especially in the space of
+edge computing applications [38, 51, 47, 45, 42]. The objective is
+to reduce the communication cost to a minimum while not com-
+promising model quality. Yet, most works neglect the full cost of
+communication as it was introduced by the per-bit communication
+model [23]. Yousefpour et al. [46] provide a holistic viewpoint on
+energy consumption of a wide range of Fl system configurations.
+Especially, asynchronous FL, which accelerates the training pro-
+cess based on increased training parallelism, incurs a significantly
+higher energy footprint than round-based FL.
+To the best of our knowledge, there is no overlap between federated
+foundation model training and energy-aware FL yet. Our paper
+creates this link by evaluating state-of-the-art hardware for its
+capabilities to serve FL workloads involving foundation models
+and discusses what can be done to improve the overall energy
+efficiency of an FL system. Our evaluation underpins the importance
+of developing parameter-efficient training techniques for FL, not
+only to mitigate data heterogeneity effects but also to reduce energy
+consumption and improve computational efficiency.
+DISCUSSION
+With formal regulations for AI applications on the horizon, energy
+monitoring and building energy-efficient FL systems will soon be-
+come a necessity to comply with standards for modern AI systems
+and subsequently build trust with end users. Therefore, it is key
+to understand the benefits of FL when working with foundation
+models (the good), the open challenges (the bad), and what indirect
+effects FL has (the ugly).
+The Good. By design, FL enables data parallel training of a shared
+model across geo-distributed clients. A major benefit is the access
+to a much broader range of data as compared to centralized learning
+where training data is challenging to acquire. At the same time, the
+privacy-preserving design of FL also supports building the trust of
+end users in FL applications since clients must not share their raw
+data. Overall, this helps improve the quality of foundation models
+on downstream tasks and lower the data bias as we continuously
+train over an evolving client basis.
+The Bad. We do find state-of-the-art embedded devices for deep
+learning applications to be bottlenecked, which limits the applica-
+bility of optimization techniques that we know from deep learning
+in high-performance computing environments, especially as in data
+centers, the memory bandwidth of GPUs has increased significantly
+(e.g., with the NVIDIA H100). However, as we show in the introduc-
+tion, the trend of increasing memory bandwidth has also started
+for embedded devices. Nonetheless, we can develop targeted opti-
+mizations for FL workloads on embedded devices such as the Orins
+by profiling what GPU kernels are responsible for the on-client
+memory bottleneck. Also, promising techniques such as 1.58-bit
+training of foundation models are capable of reducing the need for
+high memory bandwidth significantly [31]. Furthermore, recent
+research has shown that LoRA is more sensitive towards a non-IID
+data distribution, but adaptive methods for configuring LoRA are a
+promising direction to mitigate this challenge [3].
+The Ugly. We show in our study that even though we apply PEFT
+for all FLAN-T5 models, the energy consumption incurred during
+training and attributable to communication is still significant. To
+put the energy consumption into perspective: Fine-tuning FLAN-T5
+Large over the Samsum dataset is possible on a single GPU or even
+on a single Orin, neglecting the benefit of broader data access, which
+FL provides. With our configuration (Table 3), training on an A100
+takes approximately 3.33 hours or 1.3 kWh of power, and on an Orin,
+it takes approximately 8.33 hours or 0.5 kWh. As such, fine-tuning
+FLAN-T5 Large consumes more energy for communicating model
+updates than for the computations. This points out the need for
+future research on even more communication-efficient FL methods
+than we currently have available. A promising step is gradient
+projection based on probability-differentiated seeds [35].
+CONCLUSIONS
+In our work, we conduct an end-to-end study for FL workloads fo-
+cusing on energy consumption involving three foundation models.
+We point out the hardware limits of state-of-the-art embedded hard-
+ware for deep learning and put the performance into perspective
+with modern data center hardware to discover distinct performance
+characteristics. We further introduce e, the real-time metric to
+evaluate computational bottlenecks, as a drop-in replacement for
+MFU and show significant potential for on-client optimizations.
+Additionally, we show the effectiveness of eas a proxy for MFU.
+To understand the impact FL optimizers have on overall en-
+ergy consumption, we study three widely used FL optimizers and
+compare them with FedAdamW, which not only improves model
+convergence speed but also achieves higher model quality. Based on
+the FedAdamW experiments, we quantified the trade-off between
+communication and computation in FL systems with granularity.
+This underpins the relevance of parameter-efficient training
+techniques to improve communication efficiency in FL systems and
+render foundation model training practical. In the course of our
+communication analysis, we also quantify the end-to-end energy
+consumption for communication in our FL experiments, showing
+that communication is orders of magnitude more energy-intensive
+than computation for an FL application. Putting the current state
+of FL research into context with emerging AI regulation, we find
+significant benefits of FL over centralized learning when it comes
+to data lineage and the potential for data bias mitigation but we
+have to pick up on research for energy-efficient FL system designs.
+To conclude, we demonstrate the feasibility of fine-tuning foun-
+dation models in FL systems but we also hope to raise awareness
+of the substantial challenges that need to be overcome to enable
+foundation model training on a broad basis for systems suffering
+from limited computational and network resources.
+Federated Fine-Tuning of LLMs on the Very Edge: The Good, the Bad, the Ugly
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+ACKNOWLEDGEMENTS
+This work is partially funded by the Bavarian Ministry of Economic
+Affairs, Regional Development and Energy (Grant: DIK0446/01), the
+German Federal Ministry for Economic Affairs and Climate Action
+(Grant: 16KN085729), and the German Research Foundation (DFG,
+Grant: 392214008).
+REFERENCES
+Specifications/SpecificationDetails.aspx?specificationId=2585, 2008.
+//aws.amazon.com/ec2/instance-types/p3/, 2023. Accessed: 2023-09-
+[3] Sara Babakniya, Ahmed Elkordy, et al. SLoRA: Federated parameter
+efficient fine-tuning of language models. In International Workshop
+on Federated Learning in the Age of Foundation Models in Conjunc-
+06quMTmtRV.
+[4] Sebastian Baunsgaard, Matthias Boehm, and et al. Exdra: Exploratory
+data science on federated raw data. In Proceedings of the 2021 Interna-
+tional Conference on Management of Data, SIGMOD/PODS '21. ACM,
+1145/3448016.3457549.
+[5] Daniel J. Beutel, Taner Topal, Akhil Mathur, Xinchi Qiu, Javier
+Fernandez-Marques, Yan Gao, Lorenzo Sani, Kwing Hei Li, Titouan
+Parcollet, Pedro Porto Buarque de Gusmao, and Nicholas D. Lane.
+Flower: A friendly federated learning research framework, 2020. URL
+[6] Rishi Bommasani, Drew A. Hudson, et al. On the opportunities and
+edu/assets/report.pdf.
+[7] Sebastian Caldas, Peter Wu, Tian Li, Jakub Konecny, H. Brendan
+McMahan, Virginia Smith, and Ameet Talwalkar.
+Leaf: A bench-
+mark for federated settings.
+CoRR, abs/1812.01097, 2018.
+[8] Aakanksha Chowdhery, Sharan Narang, et al. Palm: scaling language
+modeling with pathways. J. Mach. Learn. Res., 24(1), mar 2024. ISSN
+1532-4435.
+[9] Hyung Won Chung, Le Hou, et al.
+Scaling instruction-finetuned
+language models.
+2022.
+doi: 10.48550/ARXIV.2210.11416.
+[10] Council of the European Union. Proposal for a REGULATION OF
+THE EUROPEAN PARLIAMENT AND OF THE COUNCIL - LAYING
+DOWN HARMONISED RULES ON ARTIFICIAL INTELLIGENCE (AR-
+TIFICIAL INTELLIGENCE ACT) AND AMENDING CERTAIN UNION
+content/EN/TXT/?uri=CELEX:52021PC0206. Document 52021PC0206.
+[11] Radosvet Desislavov, Fernando Martinez-Plumed, and Jose Hernandez-
+Orallo.
+Trends in ai inference energy consumption: Beyond the
+performance-vs-parameter laws of deep learning. Sustainable Com-
+puting: Informatics and Systems, 38:100857, 2023. ISSN 2210-5379.
+sciencedirect.com/science/article/pii/S2210537923000124.
+[12] Tao Fan, Yan Kang, Guoqiang Ma, Weijing Chen, Wenbin Wei, Lixin
+Fan, and Qiang Yang. Fate-llm: A industrial grade federated learning
+abs/2310.10049.
+[13] Jie Feng, Lei Liu, Qingqi Pei, and Keqin Li. Min-max cost optimization
+for efficient hierarchical federated learning in wireless edge networks.
+IEEE Transactions on Parallel and Distributed Systems, 33(11):2687-2700,
+2021.
+[14] Nathan C. Frey, Baolin Li, Joseph McDonald, Dan Zhao, Michael Jones,
+David Bestor, Devesh Tiwari, Vijay Gadepally, and Siddharth Samsi.
+Benchmarking resource usage for efficient distributed deep learning.
+In 2022 IEEE High Performance Extreme Computing Conference (HPEC),
+pages 1-8, 2022. doi: 10.1109/HPEC55821.2022.9926375.
+[15] Xue-Yong Fu, Md Tahmid Rahman Laskar, et al. Tiny titans: Can
+smaller large language models punch above their weight in the real
+2402.00841.
+[16] Bogdan Gliwa, Iwona Mochol, Maciej Biesek, and Aleksander Wawer.
+SAMSum corpus: A human-annotated dialogue dataset for abstractive
+summarization. In Lu Wang, Jackie Chi Kit Cheung, Giuseppe Carenini,
+and Fei Liu, editors, Proceedings of the 2nd Workshop on New Frontiers
+in Summarization, pages 70-79, Hong Kong, China, November 2019.
+Association for Computational Linguistics. doi: 10.18653/v1/D19-5409.
+[17] Chaoyang He, Songze Li, et al. Fedml: A research library and bench-
+2007.13518.
+[18] Jordan Hoffmann, Sebastian Borgeaud, et al. An empirical analysis of
+compute-optimal large language model training. In Alice H. Oh, Alekh
+Agarwal, Danielle Belgrave, and Kyunghyun Cho, editors, Advances in
+net/forum?id=iBBcRUlOAPR.
+[19] House Of Commons of Canada. An Act to enact the Consumer Privacy
+Protection Act, the Personal Information and Data Protection Tribunal
+Act and the Artificial Intelligence and Data Act and to make conse-
+[20] Edward J Hu, Yelong Shen, et al. LoRA: Low-rank adaptation of large
+language models. In International Conference on Learning Representa-
+[21] Kai
+Hwang.
+Advanced
+Computer
+Architecture:
+Paral-
+lelism,Scalability,Programmability. McGraw-Hill Higher Education,
+1st edition, 1992. ISBN 0070316228.
+[22] Andrei Ivanov, Nikoli Dryden, Tal Ben-Nun, Shigang Li, and Torsten
+Hoefler. Data movement is all you need: A case study on optimizing
+transformers. Proceedings of Machine Learning and Systems, 3:711-732,
+2021.
+[23] Fatemeh Jalali, Rob Ayre, Arun Vishwanath, Kerry Hinton, Tansu
+Alpcan, and Rod Tucker. Energy consumption of content distribu-
+tion from nano data centers versus centralized data centers. ACM
+SIGMETRICS Performance Evaluation Review, 42(3):49-54, Decem-
+ber 2014.
+ISSN 0163-5999.
+doi: 10.1145/2695533.2695555.
+[24] Jiayin Jin, Jiaxiang Ren, Yang Zhou, Lingjuan Lyu, Ji Liu, and De-
+jing Dou. Accelerated federated learning with decoupled adaptive
+//arxiv.org/abs/2207.07223.
+[25] Diederik P. Kingma and Jimmy Ba. Adam: A method for stochastic
+optimization. In Yoshua Bengio and Yann LeCun, editors, 3rd Interna-
+tional Conference on Learning Representations, ICLR 2015, San Diego,
+CA, USA, May 7-9, 2015, Conference Track Proceedings, 2015. URL
+[26] Kacper Kubiak, Grzegorz Dec, and Dorota Stadnicka. Possible applica-
+tions of edge computing in the manufacturing industry--systematic
+literature review. Sensors, 22(7):2445, March 2022. ISSN 1424-8220. doi:
+[27] Fan Lai, Yinwei Dai, Sanjay S. Singapuram, Jiachen Liu, Xiangfeng
+Zhu, Harsha V. Madhyastha, and Mosharaf Chowdhury. FedScale:
+Benchmarking model and system performance of federated learning
+at scale. In International Conference on Machine Learning (ICML), 2022.
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+Woisetschlager et al.
+[28] Chin-Yew Lin. ROUGE: A package for automatic evaluation of sum-
+maries. In Text Summarization Branches Out, pages 74-81, Barcelona,
+Spain, July 2004. Association for Computational Linguistics. URL
+[29] Wei Liu, Li Chen, et al. Accelerating federated learning via momentum
+gradient descent. IEEE Transactions on Parallel and Distributed Systems,
+31(8):1754-1766, 2020. doi: 10.1109/TPDS.2020.2975189.
+[30] Ilya Loshchilov and Frank Hutter. Decoupled weight decay regular-
+ization. In International Conference on Learning Representations, 2019.
+[31] Shuming Ma, Hongyu Wang, Lingxiao Ma, Lei Wang, Wenhui Wang,
+Shaohan Huang, Li Dong, Ruiping Wang, Jilong Xue, and Furu Wei.
+The era of 1-bit llms: All large language models are in 1.58 bits, 2024.
+[32] Grigory
+Malinovsky,
+Samuel
+Horvath,
+Konstantin
+Pavlovich
+Burlachenko, and Peter Richtarik. Federated learning with regularized
+client participation. In Federated Learning and Analytics in Practice:
+Algorithms, Systems, Applications, and Opportunities, 2023.
+[33] Brendan McMahan, Eider Moore, et al.
+Communication-Efficient
+Learning of Deep Networks from Decentralized Data. In Aarti Singh
+and Jerry Zhu, editors, Proceedings of the 20th International Conference
+on Artificial Intelligence and Statistics, volume 54 of Proceedings of
+Machine Learning Research, pages 1273-1282. PMLR, 20-22 Apr 2017.
+[34] Samuel S. Ogden and Tian Guo. MODI: Mobile deep inference made
+efficient by edge computing.
+In USENIX Workshop on Hot Topics
+in Edge Computing (HotEdge 18), Boston, MA, July 2018. USENIX
+Association.
+presentation/ogden.
+[35] Zhen Qin, Daoyuan Chen, et al. Federated full-parameter tuning
+of billion-sized language models with communication cost under 18
+[36] Sashank J. Reddi, Zachary Charles, et al. Adaptive federated optimiza-
+tion. In International Conference on Learning Representations, 2021.
+[37] Jie Ren, Samyam Rajbhandari, et al. Zero-offload: Democratizing
+billion-scale model training. In 2021 USENIX Annual Technical Confer-
+ence (USENIX ATC 21), pages 551-564, 2021.
+[38] Swapnil Sadashiv Shinde, Arash Bozorgchenani, Daniele Tarchi, and
+Qiang Ni. On the design of federated learning in latency and en-
+ergy constrained computation offloading operations in vehicular edge
+computing systems. IEEE Transactions on Vehicular Technology, 71(2):
+2041-2057, 2021.
+[39] Yuanyishu Tian, Yao Wan, Lingjuan Lyu, Dezhong Yao, Hai Jin, and
+Lichao Sun. FedBERT: When federated learning meets pre-training.
+ACM Transactions on Intelligent Systems and Technology, 13(4):1-26, Au-
+[40] Martino Trevisan, Ali Safari Khatouni, and Danilo Giordano. Errant:
+Realistic emulation of radio access networks. Computer Networks, 176:
+107289, July 2020. ISSN 1389-1286. doi: 10.1016/j.comnet.2020.107289.
+[41] Blesson Varghese, Nan Wang, David Bermbach, Cheol-Ho Hong,
+Eyal De Lara, Weisong Shi, and Christopher Stewart. A survey on edge
+performance benchmarking. ACM Comput. Surv., 54(3), apr 2021. ISSN
+[42] Xiaofei Wang, Yiwen Han, Chenyang Wang, Qiyang Zhao, Xu Chen,
+and Min Chen. In-edge ai: Intelligentizing mobile edge computing,
+caching and communication by federated learning. Ieee Network, 33
+(5):156-165, 2019.
+[43] Herbert Woisetschlager, Alexander Erben, Bill Marino, Shiqiang Wang,
+Nicholas D. Lane, Ruben Mayer, and Hans-Arno Jacobsen. Federated
+learning priorities under the european union artificial intelligence act,
+[44] Mengwei Xu, Dongqi Cai, Yaozong Wu, Xiang Li, and Shangguang
+Wang. Fwdllm: Efficient fedllm using forward gradient, 2023. URL
+[45] Yunfan Ye, Shen Li, Fang Liu, Yonghao Tang, and Wanting Hu. Edgefed:
+Optimized federated learning based on edge computing. IEEE Access,
+8:209191-209198, 2020. ISSN 2169-3536. doi: 10.1109/access.2020.
+[46] Ashkan Yousefpour, Shen Guo, Ashish Shenoy, Sayan Ghosh, Pierre
+Stock, Kiwan Maeng, Schalk-Willem Kruger, Michael Rabbat, Carole-
+Jean Wu, and Ilya Mironov. Green federated learning, 2023. URL
+[47] Rong Yu and Peichun Li. Toward resource-efficient federated learning
+in mobile edge computing. IEEE Network, 35(1):148-155, 2021.
+[48] Jianyi Zhang, Saeed Vahidian, Martin Kuo, Chunyuan Li, Ruiyi Zhang,
+Tong Yu, Guoyin Wang, and Yiran Chen. Towards building the feder-
+atedGPT: Federated instruction tuning. In International Workshop on
+Federated Learning in the Age of Foundation Models in Conjunction with
+[49] Zhuo Zhang, Yuanhang Yang, Yong Dai, Qifan Wang, Yue Yu, Lizhen
+Qu, and Zenglin Xu. FedPETuning: When federated learning meets the
+parameter-efficient tuning methods of pre-trained language models.
+In Anna Rogers, Jordan Boyd-Graber, and Naoaki Okazaki, editors,
+Findings of the Association for Computational Linguistics: ACL 2023,
+pages 9963-9977, Toronto, Canada, July 2023. Association for Com-
+putational Linguistics. doi: 10.18653/v1/2023.findings-acl.632. URL
+[50] Yanli Zhao, Andrew Gu, et al. Pytorch fsdp: Experiences on scaling
+fully sharded data parallel. Proc. VLDB Endow., 16(12):3848-3860, aug
+//doi.org/10.14778/3611540.3611569.
+[51] Jingjing Zheng, Kai Li, Eduardo Tovar, and Mohsen Guizani. Federated
+learning for energy-balanced client selection in mobile edge computing.
+In 2021 International Wireless Communications and Mobile Computing
+(IWCMC), pages 1942-1947. IEEE, 2021.
+Federated Fine-Tuning of LLMs on the Very Edge: The Good, the Bad, the Ugly
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+APPENDIX
+Our appendix is organized along the main paper structure. We
+provide additional details for our methodology, experimental setup,
+and experiment results.
+Appendix A
+METHODOLOGY
+Communication efficiency. We use to per-bit communication
+model proposed by Jalali et al. [23] to estimate the total communi-
+cation cost of our FL experiments. In the following, we provide a
+detailed explanation of calculating the cost for an FL experiment
+with the per-bit communication cost model.
+Pt = Et* B = (nas * Eas + nLTEE * ELTEE + nLTEB * ELTEB + Ebng
++ ne* Ee+ nc* Ec+ nd* Ed) * B.
+Pt is the total power draw for a single transmission. Eas, ELTEE,
+ELTEB, Ebng, Ee, Ec, Eddenote the per-bit energy consumption of
+edge one or more ethernet switches nas, one or 0 client-side LTE
+endpoint nLTEE, one or 0 LTE base stations nLTEB, the broadband
+network gateway (BNG), one or more edge routers ne, one or more
+core routers nc, and one or more data center Ethernet switches
+nd, respectively. We adopt the energy consumption of networking
+devices as specified in Jalali et al. [23] and assume nas = 1, nbng = 1,
+ne = 3. nc = 4, and nd = 2. For calculation involving wireless
+communication, we assume nLTEE = 1 and nLTEB = 1, 0 otherwise.
+B is the number of trainable model parameters multiplied by the
+parameter precision (32 bits in our case).
+Table 2: Energy efficiency is measured in TPS
+FLAN-T5 Model
+Minib. Size
+Device
+Avg. Power Draw (W)
+Small
+A100
+75.8
+21.16
+1603.62
+AGX Orin
+16.7
+55.26
+923.04
+A100
+103.17
+121.63
+12548.15
+AGX Orin
+28.1
+200.75
+5641.15
+A100
+120.96
+215.03
+26010.34
+AGX Orin
+35.8
+198.32
+7099.35
+A100
+171.15
+258.52
+44246.31
+AGX Orin
+38.84
+196.53
+7633.56
+A100
+212.53
+304.82
+64782.11
+AGX Orin
+38.82
+203.57
+7903.25
+A100
+247.72
+327.2
+81055.16
+AGX Orin
+41.08
+195.73
+8040.93
+Base
+A100
+85.63
+13.0
+1113.37
+AGX Orin
+24.86
+25.23
+627.45
+A100
+135.57
+63.77
+8645.35
+AGX Orin
+31.3
+74.21
+2322.81
+A100
+159.09
+94.55
+15041.23
+AGX Orin
+38.59
+66.51
+2566.63
+A100
+223.55
+99.28
+22194.39
+AGX Orin
+38.54
+69.84
+2691.45
+A100
+260.68
+100.08
+26088.77
+AGX Orin
+Out of memory
+Large
+A100
+91.61
+6.06
+554.97
+AGX Orin
+26.1
+11.24
+293.38
+A100
+173.43
+24.24
+4204.11
+AGX Orin
+41.46
+20.36
+844.18
+A100
+196.9
+33.76
+6647.37
+AGX Orin
+Out of memory
+A100
+128.21
+4.31
+552.0
+AGX Orin
+Out of memory
+Appendix B
+EXPERIMENTAL SETUP
+Evaluation hardware. We feel it is important to provide an esti-
+mate for establishing a research cluster with NVIDIA Jetson Orin
+64 GB devices. We purchased the devices in mid-2023 at a unit
+price tag of roughly EUR 2,400, totaling EUR 24,000 just in compute.
+Additionally, we equipped each Orin with a Samsung 980 Pro 1
+TB NVMe SSD, which cost us a total of EUR 700. The necessary
+networking infrastructure (FS S5860-48XMG-U + cables) with a
+10 Gbit/s uplink for each device had a price tag of EUR 4,900. The
+enclosure is custom-made from sheet metal and aluminum to fit a
+standard 19-inch rack. The material for the case was around EUR
+150 + 5 hours for assembly. In total, our embedded computing clus-
+ter cost us just shy of EUR 30,000. We are happy to share CAD
+designs and a full part list with anyone interested.
+DL models. We use the pre-trained FLAN-T5 models provided
+by Google via the HuggingFace hub. For each model, we ran a
+hyperparameter search in a centralized experiment on a single
+node. In our experiments, we chose the optimal hyperparameter
+configuration as depicted in table 3. Our search space is as follows.
+The learning rate was selected from a set of values [0.1, 0.001, 0.0006,
+0.0005, 0.0003, 0.0001, 0.00001]. Similarly, we selected the weight
+decay from the following set [0.1, 0.003, 0.001, 0.0009, 0.0001]. The
+momentum and 1 were selected from the set [0.85, 0.9, 0.95]. 2
+was selected from the set [0.99, 0.995, 0.999, 0.9999].
+Dataset. We randomly sample the Samsum dataset by using a
+Dirichlet distribution (= 1.0) for 100 clients in our experiments.
+The number of samples per client is depicted in Figure 6.
+FL setup In Table 3, we provide the full set of hyperparameters
+used in our experiments. For our main paper, we limit the number
+of samples each model sees to 60, 000. In addition, we performed
+additional experiments to identify the point of overfitting for each
+FL optimizer that would allow a model to converge. We chose to
+validate the global model every 200 FL rounds.
+Appendix C
+RESULTS
+This appendix section contains additional results on the energy
+efficiency measurements and micro-benchmark timings.
+Energy efficiency
+Energy efficiency is derived from the average power draw of each
+device during our experiments. The experiments are fixed to 100
+steps per epoch for each experiment. Table 2 contains details on
+our energy efficiency calculations.
+Model FLOP Utilization
+MFU helps to identify computational or memory bottlenecks. Ta-
+ble 5 depicts all details required to calculate the MFU.
+Micro-benchmark
+Table 4 describes the step timings in detail and provides a perspec-
+tive on the speed differences between the data center and embedded
+hardware.
+DEEM 24, June 9, 2024, Santiago, AA, Chile
+Woisetschlager et al.
+Model
+Small
+Base
+Large
+Optimizer
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+FedAvg
+FedAvgM
+FedAdam
+FedAdamW
+Mini-Batch Size
+Learning Rate
+0.01
+0.0005
+0.0005
+0.001
+0.0005
+0.0005
+0.01
+0.0005
+0.0005
+Weight Decay
+0.001
+0.001
+0.001
+0.001
+0.001
+0.001
+0.001
+0.001
+0.001
+Momentum
+0.999
+0.999
+0.999
+0.999
+0.999
+0.999
+Training rounds
+Clients p. Round
+Table 3: Hyperparameter settings for all FLAN-T5 models and the corresponding optimizers.
+Client ID
+# Samples
+Figure 6: Dataset samples per client
+Table 5: Details on MFU calculation for the NVIDIA A100
+and Jetson AGX Orin platforms.
+FLAN-T5 Model
+Minib. Size
+Device
+Params
+# Layers
+dmodel
+nattheads
+Seq. Len.
+Small
+A100
+1657.0
+512.0
+1024.0
+512.0
+Orin AGX
+927.0
+512.0
+1024.0
+512.0
+A100
+13051.0
+512.0
+1024.0
+512.0
+Orin AGX
+5665.0
+512.0
+1024.0
+512.0
+A100
+26741.0
+512.0
+1024.0
+512.0
+Orin AGX
+7112.0
+512.0
+1024.0
+512.0
+A100
+45428.0
+512.0
+1024.0
+512.0
+Orin AGX
+7713.0
+512.0
+1024.0
+512.0
+A100
+65944.0
+512.0
+1024.0
+512.0
+10.3
+Orin AGX
+8040.0
+512.0
+1024.0
+512.0
+A100
+82045.0
+512.0
+1024.0
+512.0
+12.8
+Orin AGX
+8094.0
+512.0
+1024.0
+512.0
+Base
+A100
+1134.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+Orin AGX
+631.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+A100
+8805.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+Orin AGX
+2339.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+A100
+15380.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+Orin AGX
+2591.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+A100
+22427.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+11.1
+Orin AGX
+2692.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+A100
+26250.0
+12.0
+768.0
+2048.0
+12.0
+512.0
+13.0
+AGX Orin
+Out of memory
+Large
+A100
+562.0
+24.0
+1024.0
+2816.0
+16.0
+512.0
+Orin AGX
+298.0
+24.0
+1024.0
+2816.0
+16.0
+512.0
+A100
+4260.0
+24.0
+1024.0
+2816.0
+16.0
+512.0
+Orin AGX
+853.0
+24.0
+1024.0
+2816.0
+16.0
+512.0
+A100
+6728.0
+24.0
+1024.0
+2816.0
+16.0
+512.0
+10.5
+AGX Orin
+Out of memory
+A100
+560.0
+24.0
+2048.0
+5120.0
+32.0
+512.0
+AGX Orin
+Out of memory
+Table 4: Results of the micro-benchmark of the FLAN-T5
+transformer model family on the NVIDIA A100 and Jetson
+AGX Orin platforms. The sequence length per batch item is
+512.
+FLAN-T5 Model
+Batch Size
+Device
+Backward
+Opt. Step
+Loss Calc.
+Forward
+Batch Loading
+Total Time
+Small
+A100
+0.09
+0.16
+0.06
+0.01
+1657.87
+0.32
+AGX Orin
+0.15
+0.09
+0.01
+927.51
+0.55
+A100
+0.09
+0.16
+0.06
+0.01
+13051.3
+0.33
+AGX Orin
+0.22
+0.01
+5665.54
+0.73
+A100
+0.09
+0.16
+0.06
+0.01
+26741.79
+0.31
+AGX Orin
+0.36
+0.63
+0.15
+0.01
+7112.45
+1.15
+A100
+0.12
+0.18
+0.06
+0.01
+45428.27
+0.37
+AGX Orin
+0.66
+1.16
+0.32
+0.01
+7713.02
+2.15
+A100
+0.17
+0.26
+0.06
+0.01
+65944.32
+0.51
+AGX Orin
+1.28
+2.22
+0.64
+0.01
+7992.08
+4.15
+A100
+0.28
+0.46
+0.06
+0.02
+82045.0
+0.81
+AGX Orin
+4.34
+1.21
+0.01
+8046.96
+8.15
+Base
+A100
+0.14
+0.23
+0.08
+0.01
+1134.51
+0.46
+AGX Orin
+0.22
+0.45
+0.14
+0.01
+631.08
+0.82
+A100
+0.14
+0.23
+0.09
+0.01
+8805.38
+0.47
+AGX Orin
+0.51
+0.95
+0.01
+2339.49
+1.76
+A100
+0.17
+0.27
+0.09
+0.02
+15380.06
+0.54
+AGX Orin
+0.93
+1.69
+0.57
+0.01
+2590.44
+3.19
+A100
+0.24
+0.38
+0.01
+22427.21
+0.74
+AGX Orin
+1.81
+3.19
+1.09
+0.01
+2692.26
+6.09
+A100
+0.65
+0.19
+0.01
+26250.25
+1.26
+AGX Orin
+Out of memory
+Large
+A100
+0.27
+0.46
+0.18
+0.02
+562.2
+0.92
+AGX Orin
+0.43
+1.03
+0.27
+0.01
+298.91
+1.75
+A100
+0.29
+0.49
+0.18
+0.02
+4260.38
+0.97
+AGX Orin
+1.31
+2.62
+0.92
+0.01
+850.43
+4.85
+A100
+0.62
+0.02
+6728.79
+1.23
+AGX Orin
+Out of memory
+A100
+0.27
+0.48
+0.17
+0.02
+560.07
+0.93
+AGX Orin
+Out of memory
