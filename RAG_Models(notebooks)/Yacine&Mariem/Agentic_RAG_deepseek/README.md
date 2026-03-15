@@ -147,9 +147,3 @@ Report issues on the [GitHub Issues](https://github.com/ADHAYA-Technos/Automated
 
 - Uses models from HuggingFace and the `sentence-transformers` library.
 - Inspired by research on RAG and multi-agent systems for NLP.
-
----
-
-**Author**: [DAIT DEHANE Yacine]  
-**Contact**: [y.daitdehane@esi-sba.dz]  
-**Last Updated**: April 28, 2025
